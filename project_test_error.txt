@@ -1,0 +1,48 @@
+
+   FAIL  Tests\Feature\Tenant\ProjectTest
+  ⨯ tenant user can view projects index
+  ⨯ tenant user can create project
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\Tenant\ProjectTest > tenant user ca…  QueryException   
+  SQLSTATE[HY000]: General error: 1 table "activity_log" already exists (Connection: sqlite, Database: :memory:, SQL: create table "activity_log" ("id" integer primary key autoincrement not null, "log_name" varchar, "description" text not null, "subject_type" varchar, "subject_id" integer, "causer_type" varchar, "causer_id" integer, "properties" text, "batch_uuid" varchar, "event" varchar, "created_at" datetime, "updated_at" datetime))
+
+  at vendor/laravel/framework/src/Illuminate/Database/Connection.php:578
+    574▕             if ($this->pretending()) {
+    575▕                 return true;
+    576▕             }
+    577▕ 
+  ➜ 578▕             $statement = $this->getPdo()->prepare($query);
+    579▕ 
+    580▕             $this->bindValues($statement, $this->prepareBindings($bindings));
+    581▕ 
+    582▕             $this->recordsHaveBeenModified();
+
+      [2m+7 vendor frames [22m
+  8   database/migrations/tenant/2026_01_26_153735_create_activity_log_table.php:10
+      [2m+26 vendor frames [22m
+  35  tests/Feature/Tenant/ProjectTest.php:18
+
+  ────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\Tenant\ProjectTest > tenant user ca…  QueryException   
+  SQLSTATE[HY000]: General error: 1 table "activity_log" already exists (Connection: sqlite, Database: :memory:, SQL: create table "activity_log" ("id" integer primary key autoincrement not null, "log_name" varchar, "description" text not null, "subject_type" varchar, "subject_id" integer, "causer_type" varchar, "causer_id" integer, "properties" text, "batch_uuid" varchar, "event" varchar, "created_at" datetime, "updated_at" datetime))
+
+  at vendor/laravel/framework/src/Illuminate/Database/Connection.php:578
+    574▕             if ($this->pretending()) {
+    575▕                 return true;
+    576▕             }
+    577▕ 
+  ➜ 578▕             $statement = $this->getPdo()->prepare($query);
+    579▕ 
+    580▕             $this->bindValues($statement, $this->prepareBindings($bindings));
+    581▕ 
+    582▕             $this->recordsHaveBeenModified();
+
+      [2m+7 vendor frames [22m
+  8   database/migrations/tenant/2026_01_26_153735_create_activity_log_table.php:10
+      [2m+26 vendor frames [22m
+  35  tests/Feature/Tenant/ProjectTest.php:18
+
+
+  Tests:    2 failed (0 assertions)
+  Duration: 0.36s
+
