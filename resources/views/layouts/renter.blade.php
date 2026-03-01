@@ -21,7 +21,11 @@
     {{-- <x-flux::toast /> --}}
     @endpersist
 
-    {{ $slot }}
+    @if(isset($slot))
+        {{ $slot }}
+    @else
+        @yield('content')
+    @endif
 
     @fluxScripts
 </body>
