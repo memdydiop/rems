@@ -17,10 +17,12 @@ class Plan extends Model
         'interval',
         'description',
         'features',
+        'is_public',
     ];
 
     protected $casts = [
         'features' => 'array',
+        'is_public' => 'boolean',
     ];
 
     public function getFormattedPriceAttribute()

@@ -9,101 +9,97 @@ class PlanSeeder extends Seeder
 {
     public function run(): void
     {
-        // Optional: Truncate to ensure clean slate? Or just delete old codes?
-        // Let's delete old codes explicitly to cleanup.
+        // Clean up old plans
         Plan::whereIn('paystack_code', ['PLN_basic', 'PLN_monthly', 'PLN_standard_yearly', 'PLN_premium', 'PLN_premium_yearly'])->delete();
 
-        // OR better yet, just truncate if we are sure? No, existing subscriptions might link to IDs. 
-        // We should probably just soft delete or update them. 
-        // But if they are 'updateOrCreate' and we changed keys, we have duplicates.
-
-        // Let's rely on name updates or just delete everything for this dev environment?
-        // User is in dev.
-        // Plan::truncate(); // Risky if foreign keys.
-
-        // Plan 1: Starter
-
+        // ─── Starter ───────────────────────────────────────────────
         $starterFeatures = [
-            'Propriétés max' => 20,
-            'Utilisateurs max' => 1,
-            'Suivi manuel des loyers' => true,
-            'Portail locataire basique' => true,
-            'Demandes de maintenance' => true,
+            'max_properties' => 20,
+            'max_users' => 1,
+            'rent_tracking' => true,
+            'renter_portal' => true,
+            'maintenance_requests' => true,
         ];
 
         Plan::updateOrCreate(['paystack_code' => 'PLN_starter'], [
             'name' => 'Starter',
-            'amount' => 1900000, // 19 000 XOF (approx $29)
+            'amount' => 1900000, // 19 000 XOF/mois
             'currency' => 'XOF',
             'interval' => 'monthly',
             'description' => 'Pour les nouveaux bailleurs (1-20 unités).',
             'features' => $starterFeatures,
+            'is_public' => true,
         ]);
 
         Plan::updateOrCreate(['paystack_code' => 'PLN_starter_yearly'], [
             'name' => 'Starter (Annuel)',
-            'amount' => 19000000, // 190 000 XOF
+            'amount' => 17100000, // 171 000 XOF/an (= 10 mois, -2 mois offerts)
             'currency' => 'XOF',
             'interval' => 'annually',
             'description' => 'Pour les nouveaux bailleurs (1-20 unités).',
             'features' => $starterFeatures,
+            'is_public' => true,
         ]);
 
-        // Growth Plan
+        // ─── Croissance ────────────────────────────────────────────
         $growthFeatures = array_merge($starterFeatures, [
-            'Propriétés max' => -1, // Unlimited
-            'Utilisateurs max' => 3,
-            'Paiements en ligne' => true,
-            'Gestion des dépenses' => true,
-            'Sélection des locataires' => true,
+            'max_properties' => -1, // Illimité
+            'max_users' => 3,
+            'online_payments' => true,
+            'expense_management' => true,
+            'tenant_screening' => true,
         ]);
 
         Plan::updateOrCreate(['paystack_code' => 'PLN_growth'], [
             'name' => 'Croissance',
-            'amount' => 6500000, // 65 000 XOF (approx $99)
+            'amount' => 6500000, // 65 000 XOF/mois
             'currency' => 'XOF',
             'interval' => 'monthly',
             'description' => 'Pour les portefeuilles en croissance.',
             'features' => $growthFeatures,
+            'is_public' => true,
         ]);
 
         Plan::updateOrCreate(['paystack_code' => 'PLN_growth_yearly'], [
             'name' => 'Croissance (Annuel)',
-            'amount' => 65000000, // 650 000 XOF
+            'amount' => 65000000, // 650 000 XOF/an (= 10 mois)
             'currency' => 'XOF',
             'interval' => 'annually',
             'description' => 'Pour les portefeuilles en croissance.',
             'features' => $growthFeatures,
+            'is_public' => true,
         ]);
 
-        // Business Plan
+        // ─── Entreprise ────────────────────────────────────────────
         $businessFeatures = array_merge($growthFeatures, [
-            'Utilisateurs max' => -1, // Unlimited
-            'Portails propriétaires' => true,
-            'Rôles multi-utilisateurs' => true,
-            'Support prioritaire' => true,
-            'Accès API' => true,
+            'max_users' => -1, // Illimité
+            'owner_portals' => true,
+            'multi_user_roles' => true,
+            'priority_support' => true,
+            'api_access' => true,
         ]);
 
         Plan::updateOrCreate(['paystack_code' => 'PLN_business'], [
             'name' => 'Entreprise',
-            'amount' => 16500000, // 165 000 XOF (approx $249)
+            'amount' => 16500000, // 165 000 XOF/mois
             'currency' => 'XOF',
             'interval' => 'monthly',
             'description' => 'Pour les agences et les équipes.',
             'features' => $businessFeatures,
+            'is_public' => true,
         ]);
 
         Plan::updateOrCreate(['paystack_code' => 'PLN_business_yearly'], [
             'name' => 'Entreprise (Annuel)',
-            'amount' => 165000000, // 1 650 000 XOF
+            'amount' => 165000000, // 1 650 000 XOF/an (= 10 mois)
             'currency' => 'XOF',
             'interval' => 'annually',
             'description' => 'Pour les agences et les équipes.',
             'features' => $businessFeatures,
+            'is_public' => true,
         ]);
 
-        // Developer Plan
+        // ─── Developer (interne, non public) ───────────────────────
         Plan::updateOrCreate(['paystack_code' => 'PLN_dev'], [
             'name' => 'Developer',
             'amount' => 0,
@@ -113,10 +109,18 @@ class PlanSeeder extends Seeder
             'features' => [
                 'max_properties' => -1,
                 'max_users' => -1,
-                'api_access' => true,
+                'rent_tracking' => true,
+                'renter_portal' => true,
+                'maintenance_requests' => true,
+                'online_payments' => true,
+                'expense_management' => true,
+                'tenant_screening' => true,
                 'owner_portals' => true,
-                'everything' => true
+                'multi_user_roles' => true,
+                'priority_support' => true,
+                'api_access' => true,
             ],
+            'is_public' => false,
         ]);
     }
 }

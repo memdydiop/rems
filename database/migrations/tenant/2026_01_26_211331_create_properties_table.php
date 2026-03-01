@@ -18,9 +18,8 @@ return new class extends Migration {
             $table->text('address')->nullable();
             $table->string('type')->default(PropertyType::Apartment->value);
             $table->string('status')->default(PropertyStatus::Active->value);
-            $table->string('owner_name')->nullable();
-            $table->string('owner_email')->nullable();
-            $table->string('owner_phone')->nullable();
+            $table->uuid('owner_id')->nullable();
+            $table->softDeletes();
             $table->timestamps();
         });
     }

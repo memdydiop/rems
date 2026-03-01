@@ -25,6 +25,7 @@ return new class extends Migration {
             $table->string('receipt_path')->nullable();
             $table->text('notes')->nullable();
 
+            $table->softDeletes();
             $table->timestamps();
         });
     }

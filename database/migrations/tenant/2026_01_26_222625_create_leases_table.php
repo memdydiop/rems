@@ -26,6 +26,7 @@ return new class extends Migration {
 
             $table->json('documents')->nullable(); // Array of file paths
 
+            $table->softDeletes();
             $table->timestamps();
         });
     }

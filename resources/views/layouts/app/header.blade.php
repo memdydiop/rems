@@ -71,6 +71,9 @@
 
     {{ $slot }}
 
+    <flux:footer>
+        Footer
+    </flux:footer>
     @fluxScripts
 </body>
 

@@ -3,15 +3,15 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Renter;
+use App\Models\Owner;
 use Illuminate\Http\Request;
 
-class RenterController extends Controller
+class OwnerController extends Controller
 {
     public function index(Request $request)
     {
         return response()->json(
-            Renter::with('leases')->latest()->paginate(25)
+            Owner::with('properties')->latest()->paginate(25)
         );
     }
 
@@ -22,39 +22,43 @@ class RenterController extends Controller
             'last_name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
             'phone' => 'nullable|string|max:50',
+            'address' => 'nullable|string|max:500',
+            'account_details' => 'nullable|string',
             'status' => 'sometimes|string',
         ]);
 
-        $renter = Renter::create($validated);
+        $owner = Owner::create($validated);
 
-        return response()->json($renter, 201);
+        return response()->json($owner, 201);
     }
 
-    public function show(Renter $renter)
+    public function show(Owner $owner)
     {
         return response()->json(
-            $renter->load('leases')
+            $owner->load('properties')
         );
     }
 
-    public function update(Request $request, Renter $renter)
+    public function update(Request $request, Owner $owner)
     {
         $validated = $request->validate([
             'first_name' => 'sometimes|string|max:255',
             'last_name' => 'sometimes|string|max:255',
             'email' => 'sometimes|email|max:255',
             'phone' => 'nullable|string|max:50',
+            'address' => 'nullable|string|max:500',
+            'account_details' => 'nullable|string',
             'status' => 'sometimes|string',
         ]);
 
-        $renter->update($validated);
+        $owner->update($validated);
 
-        return response()->json($renter);
+        return response()->json($owner);
     }
 
-    public function destroy(Renter $renter)
+    public function destroy(Owner $owner)
     {
-        $renter->delete();
+        $owner->delete();
 
         return response()->json(null, 204);
     }

@@ -6,19 +6,23 @@ use Livewire\Component;
 use App\Traits\WithDataTable;
 use Livewire\WithPagination;
 use App\Enums\PropertyStatus;
+use App\Models\Lease;
+use App\Models\Unit;
+use App\Models\RentPayment;
+use App\Enums\PaymentStatus;
+use App\Models\Expense;
 
 new
-    #[Layout('layouts.app', ['title' => 'Dashboard'])]
+    #[Layout('layouts.app', ['title' => 'Tenant'])]
     class extends Component {
-    use WithPagination;
-    use WithDataTable;
+    use WithPagination, WithDataTable;
 
     public $status = 'all';
 
     #[Computed]
     public function recentLeases()
     {
-        return \App\Models\Lease::with(['renter', 'unit.property'])
+        return Lease::with(['renter', 'unit.property'])
             ->when($this->status !== 'all', fn($q) => $q->where('status', $this->status))
             ->latest('start_date')
             ->paginate(5);
@@ -27,13 +31,13 @@ new
     #[Computed]
     public function stats()
     {
-        $totalUnits = \App\Models\Unit::count();
-        $occupiedUnits = \App\Models\Unit::where('status', 'occupied')->count();
+        $totalUnits = Unit::count();
+        $occupiedUnits = Unit::where('status', 'occupied')->count();
         $occupancyRate = $totalUnits > 0 ? round(($occupiedUnits / $totalUnits) * 100) : 0;
 
         // Calculate total revenue from completed payments
-        $revenue = \App\Models\RentPayment::where('status', \App\Enums\PaymentStatus::Completed)->sum('amount');
-        $expenses = \App\Models\Expense::sum('amount');
+        $revenue = RentPayment::where('status', PaymentStatus::Completed)->sum('amount');
+        $expenses = Expense::sum('amount');
 
         return [
             'properties' => \App\Models\Property::count(),
@@ -119,8 +123,6 @@ new
             });
     }
 
-
-
     #[Computed]
     public function upcomingExpirations()
     {
@@ -184,6 +186,49 @@ new
             'medium' => $requests['medium'] ?? 0,
             'low' => $requests['low'] ?? 0,
             'total' => array_sum($requests),
+        ];
+    }
+
+    #[Computed]
+    public function expensesByCategory()
+    {
+        $expenses = Expense::selectRaw('category, sum(amount) as total')
+            ->whereNotNull('category')
+            ->groupBy('category')
+            ->orderByDesc('total')
+            ->get();
+
+        return [
+            'labels' => $expenses->pluck('category')->map(fn($c) => ucfirst($c))->toArray(),
+            'data' => $expenses->pluck('total')->map(fn($v) => (float) $v)->toArray(),
+        ];
+    }
+
+    #[Computed]
+    public function occupancyTrend()
+    {
+        $data = [];
+        $categories = [];
+
+        for ($i = 11; $i >= 0; $i--) {
+            $date = now()->subMonths($i);
+            $categories[] = ucfirst($date->translatedFormat('M'));
+
+            $totalUnits = Unit::where('created_at', '<=', $date->endOfMonth())->count();
+            $occupiedUnits = Lease::where('status', 'active')
+                ->where('start_date', '<=', $date->endOfMonth())
+                ->where(function ($q) use ($date) {
+                    $q->whereNull('end_date')
+                        ->orWhere('end_date', '>=', $date->startOfMonth());
+                })
+                ->count();
+
+            $data[] = $totalUnits > 0 ? round(($occupiedUnits / $totalUnits) * 100) : 0;
+        }
+
+        return [
+            'categories' => $categories,
+            'data' => $data,
         ];
     }
 };
@@ -493,6 +538,110 @@ new
                             <strong>{{ $this->maintenanceStats['total'] }}</strong> demandes</span>
                     </div>
                 </div>
+            </x-flux::card>
+        </div>
+
+        <!-- Analytics Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Expenses by Category (Donut) -->
+            <x-flux::card>
+                <x-flux::card.header icon="chart-pie" title="Dépenses par Catégorie"
+                    subtitle="Répartition de l'année en cours" />
+
+                <x-flux::card.body>
+                    @if(count($this->expensesByCategory['data']) > 0)
+                        <div class="h-72 w-full" x-data="{
+                            init() {
+                                const data = @js($this->expensesByCategory);
+                                const colors = ['#6366f1', '#f43f5e', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16'];
+                                const chart = new ApexCharts(this.$el, {
+                                    series: data.data,
+                                    chart: { type: 'donut', height: 280, fontFamily: 'Instrument Sans, sans-serif' },
+                                    labels: data.labels,
+                                    colors: colors.slice(0, data.labels.length),
+                                    plotOptions: {
+                                        pie: {
+                                            donut: {
+                                                size: '65%',
+                                                labels: {
+                                                    show: true,
+                                                    total: {
+                                                        show: true,
+                                                        label: 'Total',
+                                                        formatter: (w) => new Intl.NumberFormat('fr-FR').format(w.globals.seriesTotals.reduce((a, b) => a + b, 0)) + ' XOF'
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
+                                    legend: { position: 'bottom', fontSize: '12px', fontWeight: 500 },
+                                    dataLabels: { enabled: false },
+                                    stroke: { width: 2, colors: ['#fff'] },
+                                    tooltip: {
+                                        y: { formatter: (val) => new Intl.NumberFormat('fr-FR').format(val) + ' XOF' }
+                                    }
+                                });
+                                chart.render();
+                            }
+                        }"></div>
+                    @else
+                        <div class="flex flex-col items-center justify-center h-40 text-center">
+                            <flux:icon name="chart-pie" class="text-zinc-200 w-10 h-10 mb-2" />
+                            <p class="text-sm text-zinc-500">Aucune dépense enregistrée.</p>
+                        </div>
+                    @endif
+                </x-flux::card.body>
+            </x-flux::card>
+
+            <!-- Occupancy Trend (Line) -->
+            <x-flux::card>
+                <x-flux::card.header icon="chart-bar" title="Taux d'Occupation" subtitle="Évolution sur 12 mois" />
+
+                <x-flux::card.body>
+                    <div class="h-72 w-full" x-data="{
+                        init() {
+                            const data = @js($this->occupancyTrend);
+                            const chart = new ApexCharts(this.$el, {
+                                series: [{ name: 'Occupation (%)', data: data.data }],
+                                chart: {
+                                    type: 'area',
+                                    height: 280,
+                                    fontFamily: 'Instrument Sans, sans-serif',
+                                    toolbar: { show: false },
+                                    zoom: { enabled: false }
+                                },
+                                dataLabels: { enabled: false },
+                                stroke: { curve: 'smooth', width: 3, colors: ['#10b981'] },
+                                xaxis: {
+                                    categories: data.categories,
+                                    axisBorder: { show: false },
+                                    axisTicks: { show: false },
+                                    labels: { style: { colors: '#94a3b8', fontSize: '12px', fontWeight: 500 } }
+                                },
+                                yaxis: {
+                                    min: 0, max: 100,
+                                    labels: {
+                                        formatter: (val) => val + '%',
+                                        style: { colors: '#94a3b8', fontSize: '12px', fontWeight: 500 }
+                                    }
+                                },
+                                grid: { borderColor: '#f1f5f9', strokeDashArray: 4 },
+                                fill: {
+                                    type: 'gradient',
+                                    gradient: { shadeIntensity: 1, opacityFrom: 0.35, opacityTo: 0.05, stops: [0, 95, 100] }
+                                },
+                                markers: { size: 0, hover: { size: 6, colors: ['#10b981'], strokeColors: '#fff', strokeWidth: 3 } },
+                                tooltip: {
+                                    theme: 'light',
+                                    y: { formatter: (val) => val + '%' },
+                                    marker: { show: true }
+                                },
+                                colors: ['#10b981']
+                            });
+                            chart.render();
+                        }
+                    }"></div>
+                </x-flux::card.body>
             </x-flux::card>
         </div>
 

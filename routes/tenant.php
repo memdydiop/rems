@@ -108,8 +108,11 @@ Route::middleware([
             Route::prefix('pdf')->name('tenant.pdf.')->group(function () {
                 Route::get('/lease/{lease}', [\App\Http\Controllers\Tenant\PdfController::class, 'leaseContract'])->name('lease');
                 Route::get('/payment/{payment}', [\App\Http\Controllers\Tenant\PdfController::class, 'paymentReceipt'])->name('payment');
+                Route::get('/receipt/{payment}', [\App\Http\Controllers\Tenant\PdfController::class, 'rentReceipt'])->name('receipt');
             });
 
+            // Owners
+            Route::livewire('/owners', 'pages::tenant.owners.index')->name('tenant.owners.index');
         });
 
         // Billing Callback - Must be accessible without active subscription
@@ -117,10 +120,6 @@ Route::middleware([
 
         // Auth & Settings
         require __DIR__ . '/settings.php';
-
-
-
-        Route::livewire('/owners', 'pages::tenant.owners.index')->name('tenant.owners.index');
     });
 
     Route::livewire('/join/{token}', 'pages::tenant.auth.join')->name('tenant.join');
@@ -134,6 +133,9 @@ Route::middleware([
         ->group(function () {
             Route::livewire('/', 'pages::renter.dashboard')->name('dashboard');
             Route::livewire('/payments', 'pages::renter.payments')->name('payments');
+            Route::get('/pay', [\App\Http\Controllers\Tenant\RenterPaymentController::class, 'show'])->name('pay');
+            Route::post('/pay/initialize', [\App\Http\Controllers\Tenant\RenterPaymentController::class, 'initialize'])->name('pay.initialize');
+            Route::get('/pay/callback', [\App\Http\Controllers\Tenant\RenterPaymentController::class, 'callback'])->name('pay.callback');
         });
 
     // Owner Portal Routes
@@ -149,6 +151,7 @@ Route::middleware([
 
 Route::middleware([
     'api',
+    'throttle:api',
     InitializeTenancyByDomain::class,
     PreventAccessFromCentralDomains::class,
 ])->prefix('api')->group(function () {
@@ -163,11 +166,15 @@ Route::middleware([
 
         Route::post('/logout', [\App\Http\Controllers\Api\AuthController::class, 'logout']);
 
-        // Resources
-        Route::apiResource('properties', \App\Http\Controllers\Api\PropertyController::class)->only(['index', 'show']);
-        Route::apiResource('units', \App\Http\Controllers\Api\UnitController::class)->only(['index', 'show']);
-        Route::apiResource('renters', \App\Http\Controllers\Api\RenterController::class)->only(['index', 'show']);
-        Route::apiResource('leases', \App\Http\Controllers\Api\LeaseController::class)->only(['index', 'show']);
+        // Resources (Full CRUD)
+        Route::apiResource('properties', \App\Http\Controllers\Api\PropertyController::class);
+        Route::apiResource('units', \App\Http\Controllers\Api\UnitController::class);
+        Route::apiResource('renters', \App\Http\Controllers\Api\RenterController::class);
+        Route::apiResource('leases', \App\Http\Controllers\Api\LeaseController::class);
         Route::apiResource('tasks', \App\Http\Controllers\Api\TaskController::class)->only(['index', 'show', 'update']);
+        Route::apiResource('expenses', \App\Http\Controllers\Api\ExpenseController::class);
+        Route::apiResource('maintenance-requests', \App\Http\Controllers\Api\MaintenanceRequestController::class);
+        Route::apiResource('owners', \App\Http\Controllers\Api\OwnerController::class);
+        Route::apiResource('rent-payments', \App\Http\Controllers\Api\RentPaymentController::class);
     });
 });

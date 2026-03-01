@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 new
-    #[Layout('layouts.app', ['title' => 'Dashboard'])]
+    #[Layout('layouts.app', ['title' => 'Central'])]
     class extends Component {
     use WithPagination;
     use WithDataTable;
@@ -457,7 +457,7 @@ new
         </div>
 
         <!-- Transaction History -->
-        <x-flux::card class="overflow-hidden mb-12">
+        <x-flux::card class="overflow-hidden">
 
             <x-flux::card.header icon="banknotes" title="Historique des Transactions"
                 subtitle="Paiements récents et facturation récurrente">

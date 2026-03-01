@@ -20,6 +20,7 @@ return new class extends Migration {
             $table->integer('trial_period_days')->default(0);
             $table->text('description')->nullable();
             $table->json('features')->nullable();
+            $table->boolean('is_public')->default(true);
             $table->timestamps();
         });
 

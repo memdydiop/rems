@@ -21,3 +21,11 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+
+# Tenant test databases
+database/tenant_*
+database/tenantauth-*
+database/test_tenant_*
+database/testing_tenant*
+database/*.localhost
+database/test

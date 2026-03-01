@@ -59,36 +59,48 @@ new #[Layout('layouts.guest')] class extends Component {
     }
 
     #[Livewire\Attributes\Computed]
-    public function allFeatures()
-    {
-        return [
-            'Propriétés max',
-            'Utilisateurs max',
-            'Suivi manuel des loyers',
-            'Portail locataire basique',
-            'Demandes de maintenance',
-            'Paiements en ligne',
-            'Gestion des dépenses',
-            'Sélection des locataires',
-            'Portails propriétaires',
-            'Rôles multi-utilisateurs',
-            'Support prioritaire',
-            'Accès API',
-        ];
-    }
-
-    #[Livewire\Attributes\Computed]
     public function plans()
     {
         $interval = $this->billingCycle === 'monthly' ? 'monthly' : 'annually';
 
         return Plan::where('interval', $interval)
-            ->whereIn('name', match ($this->billingCycle) {
-                'monthly' => ['Starter', 'Croissance', 'Entreprise'],
-                'yearly' => ['Starter (Annuel)', 'Croissance (Annuel)', 'Entreprise (Annuel)'],
-        })
+            ->where('is_public', true)
             ->orderBy('amount', 'asc')
             ->get();
+    }
+
+    #[Livewire\Attributes\Computed]
+    public function allFeatures()
+    {
+        $featureLabels = [
+            'max_properties' => 'Propriétés max',
+            'max_users' => 'Utilisateurs max',
+            'rent_tracking' => 'Suivi des loyers',
+            'renter_portal' => 'Portail locataire',
+            'maintenance_requests' => 'Demandes de maintenance',
+            'online_payments' => 'Paiements en ligne',
+            'expense_management' => 'Gestion des dépenses',
+            'tenant_screening' => 'Sélection des locataires',
+            'owner_portals' => 'Portails propriétaires',
+            'multi_user_roles' => 'Rôles multi-utilisateurs',
+            'priority_support' => 'Support prioritaire',
+            'api_access' => 'Accès API',
+        ];
+
+        $keys = collect();
+        foreach ($this->plans as $plan) {
+            $features = $plan->features ?? [];
+            foreach (array_keys($features) as $key) {
+                $keys->push($key);
+            }
+        }
+
+        return $keys->unique()->map(function ($key) use ($featureLabels) {
+            return [
+                'key' => $key,
+                'label' => $featureLabels[$key] ?? ucwords(str_replace(['_', '-'], ' ', $key)),
+            ];
+        })->values()->toArray();
     }
 
 
@@ -420,19 +432,10 @@ new #[Layout('layouts.guest')] class extends Component {
                             </div>
 
                             <ul class="space-y-4 mb-8 mt-6 text-[0.85rem] text-left px-4">
-                                @foreach ($this->allFeatures as $featureKey)
+                                @foreach ($this->allFeatures as $feature)
                                     @php
-                                        // Map display names to DB keys
-                                        $keyMap = [
-                                            'Propriétés max' => 'max_properties',
-                                            'Utilisateurs max' => 'max_users',
-                                        ];
-
-                                        $dbKey = $keyMap[$featureKey] ?? $featureKey;
-
-                                        // Check if feature exists in plan
+                                        $dbKey = $feature['key'];
                                         $value = $plan->features[$dbKey] ?? null;
-                                        // Available if it exists AND is not strictly false
                                         $isAvailable = ($value !== null && $value !== false);
                                     @endphp
 
@@ -449,7 +452,7 @@ new #[Layout('layouts.guest')] class extends Component {
                                         @endif
 
                                         <span class="flex-1 truncate">
-                                            {{ $featureKey }}
+                                            {{ $feature['label'] }}
                                         </span>
 
                                         {{-- Limit Value --}}

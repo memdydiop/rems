@@ -11,10 +11,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Property extends Model
 {
-    use HasFactory, HasUuids, LogsActivity;
+    use HasFactory, HasUuids, LogsActivity, SoftDeletes;
 
     protected $fillable = [
         'name',
@@ -22,10 +23,6 @@ class Property extends Model
         'type',
         'status',
         'owner_id',
-        // Deprecated fields, kept for migration
-        'owner_name',
-        'owner_email',
-        'owner_phone',
     ];
 
     protected $casts = [

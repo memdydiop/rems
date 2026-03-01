@@ -30,10 +30,4 @@ class Tenant extends BaseTenant implements TenantWithDatabase
     {
         return $this->hasOne(Subscription::class, 'tenant_id', 'id');
     }
-
-    public function projects()
-    {
-        // Relation defined in Project model (not here usually for Tenancy, as access checks context)
-        // But Tenant model identifies the tenant.
-    }
 }

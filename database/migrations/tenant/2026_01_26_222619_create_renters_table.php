@@ -21,6 +21,7 @@ return new class extends Migration {
             $table->string('status')->default('active'); // active, past, lead
             $table->foreignUuid('user_id')->nullable()->constrained('users')->nullOnDelete(); // Link to SaaS User if they log in
 
+            $table->softDeletes();
             $table->timestamps();
         });
     }

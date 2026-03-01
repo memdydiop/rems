@@ -64,10 +64,16 @@ new
                     <h1 class="text-3xl md:text-4xl font-bold text-zinc-900">Bonjour, {{ $this->renter?->first_name }}
                     </h1>
                 </div>
-                <flux:button variant="subtle" class="hover:bg-zinc-100 border-zinc-200" href="{{ route('logout') }}"
-                    icon="arrow-right-start-on-rectangle">
-                    Déconnexion
-                </flux:button>
+                <div class="flex items-center gap-3">
+                    <flux:button variant="filled" class="bg-emerald-600 hover:bg-emerald-700 text-white"
+                        href="{{ route('renter.pay') }}" icon="credit-card">
+                        Payer mon loyer
+                    </flux:button>
+                    <flux:button variant="subtle" class="hover:bg-zinc-100 border-zinc-200" href="{{ route('logout') }}"
+                        icon="arrow-right-start-on-rectangle">
+                        Déconnexion
+                    </flux:button>
+                </div>
             </div>
         </div>
     </div>

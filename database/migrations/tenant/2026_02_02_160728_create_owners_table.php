@@ -19,6 +19,8 @@ return new class extends Migration {
             $table->string('phone');
             $table->text('address')->nullable();
             $table->text('account_details')->nullable(); // For bank transfer info
+            $table->string('status')->default('active');
+            $table->softDeletes();
             $table->timestamps();
         });
     }

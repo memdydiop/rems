@@ -55,4 +55,29 @@ class PdfController extends Controller
 
         return $pdf->download($filename);
     }
+
+    /**
+     * Generate and download a rent receipt (quittance de loyer) PDF.
+     */
+    public function rentReceipt(RentPayment $payment): Response
+    {
+        $payment->load(['lease.renter', 'lease.unit.property']);
+
+        $lease = $payment->lease;
+        $renter = $lease->renter;
+        $unit = $lease->unit;
+        $property = $unit->property;
+
+        $pdf = Pdf::loadView('pdf.rent-receipt', [
+            'payment' => $payment,
+            'lease' => $lease,
+            'renter' => $renter,
+            'unit' => $unit,
+            'property' => $property,
+        ]);
+
+        $filename = 'quittance-' . strtoupper(substr($payment->id, 0, 8)) . '.pdf';
+
+        return $pdf->download($filename);
+    }
 }

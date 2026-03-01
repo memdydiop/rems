@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\UnitType;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -14,8 +15,10 @@ return new class extends Migration {
             $table->uuid('id')->primary();
             $table->foreignUuid('property_id')->constrained()->cascadeOnDelete();
             $table->string('name');
+            $table->string('type')->default(UnitType::Apartment->value);
             $table->decimal('rent_amount', 10, 2)->default(0);
             $table->string('status')->default('vacant');
+            $table->softDeletes();
             $table->timestamps();
         });
     }

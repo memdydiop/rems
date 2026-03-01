@@ -19,6 +19,7 @@ return new class extends Migration {
             $table->foreignUuid('property_id')->constrained()->cascadeOnDelete();
             $table->foreignUuid('unit_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignUuid('user_id')->constrained()->cascadeOnDelete(); // Reporter
+            $table->softDeletes();
             $table->timestamps();
         });
     }

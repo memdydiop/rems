@@ -10,10 +10,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Renter extends Model
 {
-    use HasFactory, HasUuids, LogsActivity, Notifiable;
+    use HasFactory, HasUuids, LogsActivity, Notifiable, SoftDeletes;
 
     protected $fillable = [
         'first_name',
