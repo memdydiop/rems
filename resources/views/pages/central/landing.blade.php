@@ -106,84 +106,99 @@ new #[Layout('layouts.guest')] class extends Component {
 
 }; ?>
 
-<div class="">
+<!-- Add Alpine Intersection Plugin -->
+@push('scripts')
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/intersect@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        .glass-header {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .hero-gradient {
+            background: linear-gradient(135deg, #031b4e 0%, #0152c2 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-glow {
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(1, 98, 232, 0.4) 0%, rgba(0, 0, 0, 0) 70%);
+            top: -200px;
+            right: -100px;
+            border-radius: 50%;
+            filter: blur(60px);
+            pointer-events: none;
+        }
+    </style>
+@endpush
+
+<div class="antialiased font-sans text-zinc-900 bg-zinc-50 scroll-smooth">
 
     <!-- Navbar -->
-    <!-- Navbar -->
-    <!-- Navbar (Valex Style) -->
-    <header class="fixed top-0 w-full z-[100] transition-all duration-300 !bg-transparent py-4"
+    <header class="fixed top-0 w-full z-[100] transition-all duration-300 py-4"
         x-data="{ scrolled: window.scrollY > 10 }"
         x-init="window.addEventListener('scroll', () => { scrolled = window.scrollY > 10 })"
-        :class="{ '!bg-white !shadow-md': scrolled }">
+        :class="scrolled ? 'glass-header py-3! shadow-sm' : 'bg-transparent'">
 
         <div class="container mx-auto px-6 flex justify-between items-center transition-all duration-300">
             <!-- Logo -->
-            <div class="flex items-center gap-2">
-                <a href="/" class="flex items-center gap-2">
+            <div class="flex items-center gap-2 relative z-10">
+                <a href="/" class="flex items-center gap-2 group">
                     <img :src="scrolled ? '{{ asset('img/brand-logos/toggle-logo.png') }}' : '{{ asset('img/brand-logos/toggle-white.png') }}'"
-                        alt="Logo" class="h-4 transition-all duration-300">
+                        alt="Logo" class="h-6 transition-transform duration-300 group-hover:scale-105">
                 </a>
             </div>
 
             <!-- Main Menu -->
-            <nav class="hidden lg:flex items-center gap-1">
-                <a href="#home" class="px-4 py-2 text-[0.85rem] font-medium transition-colors flex items-center gap-1"
-                    :class="scrolled ? 'text-[#536485] hover:text-[rgb(1,98,232)]' : 'text-white/90 hover:text-white'">
-                    Home
+            <nav class="hidden lg:flex items-center gap-2 bg-white/10 backdrop-blur-md px-6 py-2 rounded-full border border-white/20"
+                :class="scrolled ? 'bg-zinc-100/50! border-zinc-200/50!' : ''">
+                <a href="#home"
+                    class="px-3 py-1.5 text-[0.9rem] font-medium transition-colors hover:text-[rgb(0,185,255)]"
+                    :class="scrolled ? 'text-zinc-600' : 'text-white/90'">
+                    Accueil
                 </a>
                 <a href="#features"
-                    class="px-4 py-2 text-[0.85rem] font-medium transition-colors flex items-center gap-1"
-                    :class="scrolled ? 'text-[#536485] hover:text-[rgb(1,98,232)]' : 'text-white/90 hover:text-white'">
-                    Features
+                    class="px-3 py-1.5 text-[0.9rem] font-medium transition-colors hover:text-[rgb(0,185,255)]"
+                    :class="scrolled ? 'text-zinc-600' : 'text-white/90'">
+                    Fonctionnalités
                 </a>
                 <a href="#pricing"
-                    class="px-4 py-2 text-[0.85rem] font-medium transition-colors flex items-center gap-1"
-                    :class="scrolled ? 'text-[#536485] hover:text-[rgb(1,98,232)]' : 'text-white/90 hover:text-white'">
-                    Pricing
+                    class="px-3 py-1.5 text-[0.9rem] font-medium transition-colors hover:text-[rgb(0,185,255)]"
+                    :class="scrolled ? 'text-zinc-600' : 'text-white/90'">
+                    Tarifs
                 </a>
-                <div class="relative group" x-data="{ open: false }">
-                    <button @mouseenter="open = true" @mouseleave="open = false"
-                        class="px-4 py-2 text-[0.85rem] font-medium transition-colors flex items-center gap-1"
-                        :class="scrolled ? 'text-[#536485] hover:text-[rgb(1,98,232)]' : 'text-white/90 hover:text-white'">
-                        More
-                        <flux:icon name="chevron-down" class="w-3 h-3 opacity-75" />
-                    </button>
-                    <!-- Dropdown mock -->
-                    <div x-show="open" @mouseenter="open = true" @mouseleave="open = false" x-transition.opacity
-                        class="absolute top-full left-0 mt-0 w-48 bg-white shadow-lg rounded-sm py-2 border-t-2 border-[rgb(1,98,232)] hidden group-hover:block">
-                        <a href="#"
-                            class="block px-4 py-2 text-sm text-gray-600 hover:text-[rgb(1,98,232)] hover:bg-blue-50">About
-                            Us</a>
-                        <a href="#"
-                            class="block px-4 py-2 text-sm text-gray-600 hover:text-[rgb(1,98,232)] hover:bg-blue-50">Services</a>
-                        <a href="#"
-                            class="block px-4 py-2 text-sm text-gray-600 hover:text-[rgb(1,98,232)] hover:bg-blue-50">Contact</a>
-                    </div>
-                </div>
                 <a href="#contact"
-                    class="px-4 py-2 text-[0.85rem] font-medium transition-colors flex items-center gap-1"
-                    :class="scrolled ? 'text-[#536485] hover:text-[rgb(1,98,232)]' : 'text-white/90 hover:text-white'">
+                    class="px-3 py-1.5 text-[0.9rem] font-medium transition-colors hover:text-[rgb(0,185,255)]"
+                    :class="scrolled ? 'text-zinc-600' : 'text-white/90'">
                     Contact
                 </a>
             </nav>
 
             <!-- Auth Buttons -->
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-3 relative z-10" x-data="{ shown: false }"
+                x-init="setTimeout(() => shown = true, 500)" x-show="shown" x-transition.opacity.duration.1000ms
+                x-cloak>
                 @auth
                     <a href="{{ route('central.dashboard') }}"
-                        class="px-5 py-2 rounded-[4px] bg-[rgb(1,98,232)] text-white text-sm font-medium hover:bg-[#0152c2] transition-colors shadow-sm shadow-blue-200">
-                        Dashboard
+                        class="px-5 py-2.5 rounded-full bg-[rgb(1,98,232)] text-white text-sm font-semibold hover:bg-[#0152c2] transition-colors shadow-[0_0_15px_rgba(1,98,232,0.4)] hover:shadow-[0_0_25px_rgba(1,98,232,0.6)]">
+                        Mon Tableau de bord
                     </a>
                 @else
                     <a href="{{ route('login') }}"
-                        class="hidden sm:inline-flex items-center justify-center w-10 h-9 rounded-[4px] bg-[#ecf0fa] text-[#031b4e] hover:bg-blue-100 transition-colors">
-                        <flux:icon name="arrow-right-start-on-rectangle" class="w-4 h-4" />
+                        class="hidden sm:inline-flex items-center justify-center px-4 py-2 text-sm font-medium transition-colors"
+                        :class="scrolled ? 'text-zinc-700 hover:text-[rgb(1,98,232)]' : 'text-white hover:text-blue-200'">
+                        Connexion
                     </a>
 
                     <flux:modal.trigger name="request-access">
                         <button wire:click="openGenericModal"
-                            class="px-6 py-2 rounded-[4px] bg-[rgb(1,98,232)] text-white text-sm font-medium hover:bg-[#0152c2] transition-colors shadow-md shadow-blue-500/20">
-                            Sign Up
+                            class="px-6 py-2.5 rounded-full bg-[rgb(0,185,255)] text-white text-sm font-bold hover:bg-[#009ac9] transition-all duration-300 shadow-[0_0_20px_rgba(0,185,255,0.4)] hover:shadow-[0_0_30px_rgba(0,185,255,0.6)] hover:-translate-y-0.5">
+                            Démarrer gratuitement
                         </button>
                     </flux:modal.trigger>
                 @endauth
@@ -197,53 +212,123 @@ new #[Layout('layouts.guest')] class extends Component {
         </div>
     </header>
 
-    <!-- Hero Section (Valex Style) -->
-    <div class="landing-banner relative before:absolute before:inset-0 before:bg-[rgb(1,98,232)]/70 before:content-['']"
-        id="home"
-        style="background: url('{{ asset('img/hero-bg.jpg') }}'); background-size: cover; background-position: center; font-family: 'Roboto', sans-serif;">
-        <section class="section !pt-[6rem] pb-20 relative z-10">
-            <div class="container mx-auto px-6 !pt-3 sm:!pt-[6rem]">
-                <div class="grid grid-cols-12 gap-x-6">
-                    <div class="xxl:col-span-2 xl:col-span-2 lg:col-span-2 md:col-span-2 col-span-1 hidden md:block">
+    <!-- Modern SaaS Hero Section -->
+    <div class="hero-gradient relative min-h-[90vh] flex items-center pt-24 pb-20 lg:pt-32 lg:pb-32" id="home"
+        x-data="{ shown: false }" x-init="setTimeout(() => shown = true, 100)">
+        <div class="hero-glow"></div>
+        <div
+            class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGQ9Ik0wIDBoNDB2NDBIMHoiIGZpbGw9Im5vbmUiLz4KPHBhdGggZD0iTTAgMGgxdjEwTDB2MTB6bTEwIDB2MWgtMTB2LTFoMTB6IiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDMpIi8+Cjwvc3ZnPg==')] opacity-50 z-0">
+        </div>
+
+        <div class="container mx-auto px-6 relative z-10">
+            <div class="grid lg:grid-cols-2 gap-12 items-center">
+                <!-- Text Content -->
+                <div class="max-w-2xl text-center lg:text-left mx-auto lg:mx-0" x-show="shown"
+                    x-transition:enter="transition ease-out duration-1000 delay-100"
+                    x-transition:enter-start="opacity-0 translate-y-8"
+                    x-transition:enter-end="opacity-100 translate-y-0" x-cloak>
+
+                    <div
+                        class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/20 text-blue-200 border border-blue-400/30 text-sm font-medium mb-6">
+                        <span class="flex h-2 w-2 rounded-full bg-blue-400 animate-pulse"></span>
+                        Le standard de la nouvelle génération
                     </div>
-                    <div class="xxl:col-span-8 xl:col-span-8 lg:col-span-8 md:col-span-8 col-span-12">
-                        <div class="py-4 pb-lg-0 text-center">
-                            <div class="mb-3">
-                                <h5 class="font-semibold text-white/90 text-[1.25rem] op-9 mb-2">Logiciel de Gestion
-                                    Locative</h5>
-                            </div>
-                            <p
-                                class="text-[2.5rem] md:text-[3rem] font-semibold text-white mb-3 cursor-default leading-tight">
-                                Simplifiez votre gestion immobilière avec <span
-                                    class="text-[rgb(1,98,232)]">Propella</span>
-                            </p>
-                            <div class="text-[1rem] mb-8 text-white/70 max-w-2xl mx-auto">
-                                Une solution tout-en-un pur automatiser vos quittances, suivre vos paiements et gérer
-                                vos locataires sans effort.
-                                Concentrez-vous sur l'essentiel : votre croissance.
+
+                    <h1
+                        class="text-5xl lg:text-6xl xl:text-7xl font-extrabold text-white tracking-tight leading-[1.1] mb-6 drop-shadow-sm">
+                        Gérez vos biens.<br />
+                        <span
+                            class="text-transparent bg-clip-text bg-linear-to-r from-[rgb(0,185,255)] to-[rgb(1,98,232)]">Élevez
+                            vos revenus.</span>
+                    </h1>
+
+                    <p
+                        class="text-lg lg:text-xl text-blue-100/80 mb-10 leading-relaxed font-light max-w-xl mx-auto lg:mx-0">
+                        Propella est la plateforme unifiée qui combine paiements locatifs, gestion de baux et portails
+                        dédiés pour libérer le plein potentiel de votre agence.
+                    </p>
+
+                    <div class="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start">
+                        <flux:modal.trigger name="request-access">
+                            <button wire:click="openGenericModal"
+                                class="w-full sm:w-auto px-8 py-4 rounded-full bg-white text-[rgb(3,27,78)] font-bold text-lg hover:bg-zinc-50 transition-all duration-300 shadow-[0_0_30px_rgba(255,255,255,0.2)] hover:shadow-[0_0_40px_rgba(255,255,255,0.4)] hover:-translate-y-1">
+                                Essai gratuit 14 jours
+                            </button>
+                        </flux:modal.trigger>
+                        <a href="#features"
+                            class="w-full sm:w-auto px-8 py-4 rounded-full bg-blue-600/30 text-white font-medium border border-blue-400/30 hover:bg-blue-600/50 backdrop-blur-sm transition-all text-lg flex items-center justify-center gap-2 group">
+                            Découvrir les visuels
+                            <flux:icon name="arrow-down"
+                                class="size-5 group-hover:translate-y-1 transition-transform" />
+                        </a>
+                    </div>
+
+                    <div
+                        class="mt-10 flex items-center justify-center lg:justify-start gap-4 text-sm text-blue-200/60 font-medium">
+                        <div class="flex items-center gap-1">
+                            <flux:icon name="check-circle" class="size-4 text-[rgb(0,185,255)]" /> Sans engagement
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <flux:icon name="check-circle" class="size-4 text-[rgb(0,185,255)]" /> Carte non requise
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mockup Illustration -->
+                <div class="hidden lg:block relative" x-show="shown"
+                    x-transition:enter="transition ease-out duration-1000 delay-300"
+                    x-transition:enter-start="opacity-0 translate-x-12"
+                    x-transition:enter-end="opacity-100 translate-x-0" x-cloak>
+                    <!-- Abstract Glassmorphism Dashboard Mockup -->
+                    <div
+                        class="relative w-full aspect-4/3 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl p-4 overflow-hidden transform rotate-2 hover:rotate-0 transition-transform duration-700">
+                        <!-- Mac OS Window dots -->
+                        <div class="flex items-center gap-2 mb-6">
+                            <div class="size-3 rounded-full bg-rose-400/80"></div>
+                            <div class="size-3 rounded-full bg-amber-400/80"></div>
+                            <div class="size-3 rounded-full bg-emerald-400/80"></div>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-4 h-full">
+                            <!-- Sidebar mock -->
+                            <div class="col-span-1 rounded-xl bg-white/5 space-y-3 p-3">
+                                <div class="h-8 rounded bg-white/10 w-full mb-6"></div>
+                                <div class="h-4 rounded bg-white/10 w-3/4"></div>
+                                <div class="h-4 rounded bg-[rgb(0,185,255)]/40 w-full"></div>
+                                <div class="h-4 rounded bg-white/10 w-5/6"></div>
+                                <div class="h-4 rounded bg-white/10 w-2/3"></div>
                             </div>
 
-                            <div class="flex flex-wrap justify-center gap-2">
-                                <a href="#features"
-                                    class="m-1 px-6 py-2 rounded-[6px] bg-[rgb(1,98,232)] text-white hover:bg-[#0152c2] transition-colors font-medium flex items-center gap-2 shadow-lg">
-                                    Découvrir
-                                    <flux:icon name="eye" class="w-4 h-4" />
-                                </a>
-                                <flux:modal.trigger name="request-access">
-                                    <button wire:click="openGenericModal"
-                                        class="m-1 px-6 py-2 rounded-[6px] bg-[rgb(0,185,255)] text-white hover:bg-[#009ac9] transition-colors font-medium flex items-center gap-2 shadow-lg">
-                                        Commencer
-                                        <flux:icon name="arrow-right" class="w-4 h-4" />
-                                    </button>
-                                </flux:modal.trigger>
+                            <!-- Main content mock -->
+                            <div class="col-span-2 space-y-4">
+                                <!-- Cards -->
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div
+                                        class="h-24 rounded-xl bg-linear-to-br from-white/10 to-white/5 border border-white/10 p-3">
+                                        <div class="size-8 rounded-full bg-blue-400/30 mb-2"></div>
+                                        <div class="h-4 rounded bg-white/20 w-1/2"></div>
+                                    </div>
+                                    <div
+                                        class="h-24 rounded-xl bg-linear-to-br from-white/10 to-white/5 border border-white/10 p-3">
+                                        <div class="size-8 rounded-full bg-emerald-400/30 mb-2"></div>
+                                        <div class="h-4 rounded bg-white/20 w-2/3"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Chart mock -->
+                                <div
+                                    class="h-32 rounded-xl bg-white/5 border border-white/10 p-4 relative overflow-hidden">
+                                    <svg class="absolute bottom-0 w-full h-24 text-[rgb(0,185,255)]/30"
+                                        viewBox="0 0 100 100" preserveAspectRatio="none">
+                                        <path d="M0,100 L0,50 Q25,20 50,60 T100,30 L100,100 Z" fill="currentColor" />
+                                    </svg>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="xxl:col-span-2 xl:col-span-2 lg:col-span-2 md:col-span-2 col-span-1 hidden md:block">
-                    </div>
                 </div>
             </div>
-        </section>
+        </div>
     </div>
 
     <!-- Social Proof -->
@@ -263,89 +348,162 @@ new #[Layout('layouts.guest')] class extends Component {
         </div>
     </section>
 
-    <!-- Features Grid -->
-    <section id="features" class="py-24 bg-[#ecf0fa] relative z-10" style="font-family: 'Roboto', sans-serif;">
-        <div class="container mx-auto px-6">
-            <div class="text-center max-w-3xl mx-auto mb-20">
-                <span class="text-blue-600 font-bold tracking-wider uppercase text-sm mb-2 block">Fonctionnalités
-                    Principales</span>
-                <h2 class="text-4xl font-bold text-zinc-900 mb-6">Tout pour votre Agence</h2>
-                <div class="w-20 h-1 bg-blue-600 mx-auto rounded-full mb-6"></div>
-                <p class="text-lg text-zinc-500">Propella gère le travail répétitif pour que vous puissiez vous
-                    concentrer sur l'essentiel.</p>
+    <!-- Features Bento Grid -->
+    <section id="features" class="py-24 bg-zinc-50 relative z-10" style="font-family: 'Roboto', sans-serif;">
+        <div class="container mx-auto px-6 max-w-7xl">
+            <div class="text-center max-w-3xl mx-auto mb-20" x-data="{ shown: false }" x-intersect.once="shown = true">
+                <div x-show="shown" x-transition:enter="transition ease-out duration-700"
+                    x-transition:enter-start="opacity-0 translate-y-8"
+                    x-transition:enter-end="opacity-100 translate-y-0" x-cloak>
+                    <span
+                        class="text-[rgb(1,98,232)] font-bold tracking-wider uppercase text-sm mb-3 block">Fonctionnalités
+                        Clés</span>
+                    <h2 class="text-4xl md:text-5xl font-extrabold text-zinc-900 mb-6 tracking-tight">Un écosystème
+                        conçu pour la performance</h2>
+                    <p class="text-lg text-zinc-500 font-light">
+                        De la collecte des loyers à la maintenance automatisée, Propella fluidifie chaque aspect de
+                        votre métier.
+                    </p>
+                </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                <!-- Feature 1 -->
-                <div class="bg-white p-6 rounded-[6px] text-center transition-all duration-300 group hover:-translate-y-1"
-                    style="box-shadow: rgba(218, 222, 232, 0.4) -8px 12px 18px 0px; border: 1px solid #f0f0f0;">
+            <!-- Bento Grid Wrapper -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6" x-data="{ shown: false }"
+                x-intersect.once="shown = true">
+
+                <!-- BENTO 1: Multi-Tenant (Span 2) -->
+                <div class="md:col-span-2 bg-white rounded-3xl p-8 lg:p-10 border border-zinc-200/60 shadow-xl shadow-zinc-200/20 hover:shadow-2xl hover:border-[rgb(1,98,232)]/30 transition-all duration-300 group relative overflow-hidden flex flex-col justify-between min-h-75"
+                    x-show="shown" x-transition:enter="transition ease-out duration-700 delay-100"
+                    x-transition:enter-start="opacity-0 translate-y-12"
+                    x-transition:enter-end="opacity-100 translate-y-0" x-cloak>
                     <div
-                        class="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 mb-6 mx-auto group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">
-                        <flux:icon name="building-office-2" class="w-8 h-8" />
+                        class="absolute right-0 top-0 w-64 h-64 bg-blue-50/50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500">
                     </div>
-                    <h3 class="text-xl font-bold text-[rgb(3,27,78)] mb-3">Multi-Tenant</h3>
-                    <p class="text-zinc-500 leading-relaxed">Gérez plusieurs portefeuilles ou sous-agences depuis un
-                        tableau de bord maître.</p>
+                    <div>
+                        <div
+                            class="w-14 h-14 bg-blue-100/50 rounded-2xl flex items-center justify-center text-[rgb(1,98,232)] mb-6 group-hover:bg-[rgb(1,98,232)] group-hover:text-white transition-colors duration-300 shadow-sm">
+                            <flux:icon name="building-office-2" class="size-7" />
+                        </div>
+                        <h3 class="text-2xl font-bold text-zinc-900 mb-3 tracking-tight">Architecture Multi-Tenant</h3>
+                        <p class="text-zinc-500 leading-relaxed max-w-md">Gérez vos différentes sous-agences ou
+                            multiples portefeuilles dans des espaces de travail cloisonnés et parfaitement sécurisés
+                            depuis un seul compte.</p>
+                    </div>
                 </div>
 
-                <!-- Feature 2 -->
-                <div class="bg-white p-6 rounded-[6px] text-center transition-all duration-300 group hover:-translate-y-1"
-                    style="box-shadow: rgba(218, 222, 232, 0.4) -8px 12px 18px 0px; border: 1px solid #f0f0f0;">
+                <!-- BENTO 2: Compta (Span 1) -->
+                <div class="md:col-span-1 bg-white rounded-3xl p-8 lg:p-10 border border-zinc-200/60 shadow-xl shadow-zinc-200/20 hover:shadow-2xl hover:border-pink-500/30 transition-all duration-300 group relative overflow-hidden flex flex-col justify-between"
+                    x-show="shown" x-transition:enter="transition ease-out duration-700 delay-200"
+                    x-transition:enter-start="opacity-0 translate-y-12"
+                    x-transition:enter-end="opacity-100 translate-y-0" x-cloak>
                     <div
-                        class="w-16 h-16 bg-pink-100 rounded-lg flex items-center justify-center text-pink-600 mb-6 mx-auto group-hover:bg-pink-600 group-hover:text-white transition-colors duration-300">
-                        <flux:icon name="banknotes" class="w-8 h-8" />
+                        class="absolute right-0 top-0 w-40 h-40 bg-pink-50/50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500">
                     </div>
-                    <h3 class="text-xl font-bold text-[rgb(3,27,78)] mb-3">Comptabilité Auto</h3>
-                    <p class="text-zinc-500 leading-relaxed">Rapprochement automatique des loyers et génération des
-                        rapports financiers.</p>
+                    <div>
+                        <div
+                            class="w-14 h-14 bg-pink-100/50 rounded-2xl flex items-center justify-center text-pink-600 mb-6 group-hover:bg-pink-600 group-hover:text-white transition-colors duration-300 shadow-sm">
+                            <flux:icon name="banknotes" class="size-7" />
+                        </div>
+                        <h3 class="text-2xl font-bold text-zinc-900 mb-3 tracking-tight">Comptabilité & Quittances</h3>
+                        <p class="text-zinc-500 leading-relaxed">Génération automatique des quittances et rappels de
+                            paiements intelligents.</p>
+                    </div>
                 </div>
 
-                <!-- Feature 3 -->
-                <div class="bg-white p-6 rounded-[6px] text-center transition-all duration-300 group hover:-translate-y-1"
-                    style="box-shadow: rgba(218, 222, 232, 0.4) -8px 12px 18px 0px; border: 1px solid #f0f0f0;">
+                <!-- BENTO 3: Maintenance (Span 1) -->
+                <div class="md:col-span-1 bg-white rounded-3xl p-8 lg:p-10 border border-zinc-200/60 shadow-xl shadow-zinc-200/20 hover:shadow-2xl hover:border-purple-500/30 transition-all duration-300 group relative overflow-hidden flex flex-col justify-between"
+                    x-show="shown" x-transition:enter="transition ease-out duration-700 delay-300"
+                    x-transition:enter-start="opacity-0 translate-y-12"
+                    x-transition:enter-end="opacity-100 translate-y-0" x-cloak>
                     <div
-                        class="w-16 h-16 bg-purple-100 rounded-lg flex items-center justify-center text-purple-600 mb-6 mx-auto group-hover:bg-purple-600 group-hover:text-white transition-colors duration-300">
-                        <flux:icon name="wrench" class="w-8 h-8" />
+                        class="absolute inset-0 bg-linear-to-b from-transparent to-purple-50/20 opacity-0 group-hover:opacity-100 transition-opacity">
                     </div>
-                    <h3 class="text-xl font-bold text-[rgb(3,27,78)] mb-3">Maintenance</h3>
-                    <p class="text-zinc-500 leading-relaxed">Système de tickets intégré. Les locataires signalent, vous
-                        assignez.</p>
+                    <div>
+                        <div
+                            class="w-14 h-14 bg-purple-100/50 rounded-2xl flex items-center justify-center text-purple-600 mb-6 group-hover:bg-purple-600 group-hover:text-white transition-colors duration-300 shadow-sm">
+                            <flux:icon name="wrench-screwdriver" class="size-7" />
+                        </div>
+                        <h3 class="text-2xl font-bold text-zinc-900 mb-3 tracking-tight">Maintenance Auto</h3>
+                        <p class="text-zinc-500 leading-relaxed">Les locataires créent des tickets, vous suivez
+                            l'avancée avec vos prestataires.</p>
+                    </div>
                 </div>
 
-                <!-- Feature 4 -->
-                <div class="bg-white p-6 rounded-[6px] text-center transition-all duration-300 group hover:-translate-y-1"
-                    style="box-shadow: rgba(218, 222, 232, 0.4) -8px 12px 18px 0px; border: 1px solid #f0f0f0;">
+                <!-- BENTO 4: Portails Clients (Span 2) -->
+                <div class="md:col-span-2 bg-white rounded-3xl p-8 lg:p-10 border border-zinc-200/60 shadow-xl shadow-zinc-200/20 hover:shadow-2xl hover:border-teal-500/30 transition-all duration-300 group relative overflow-hidden flex flex-col lg:flex-row gap-6 items-center justify-between min-h-75"
+                    x-show="shown" x-transition:enter="transition ease-out duration-700 delay-400"
+                    x-transition:enter-start="opacity-0 translate-y-12"
+                    x-transition:enter-end="opacity-100 translate-y-0" x-cloak>
                     <div
-                        class="w-16 h-16 bg-teal-100 rounded-lg flex items-center justify-center text-teal-600 mb-6 mx-auto group-hover:bg-teal-600 group-hover:text-white transition-colors duration-300">
-                        <flux:icon name="users" class="w-8 h-8" />
+                        class="absolute left-0 bottom-0 w-64 h-64 bg-teal-50/50 rounded-tr-full -z-10 group-hover:scale-110 transition-transform duration-500">
                     </div>
-                    <h3 class="text-xl font-bold text-[rgb(3,27,78)] mb-3">Portails Clients</h3>
-                    <p class="text-zinc-500 leading-relaxed">Espaces dédiés pour vos locataires et propriétaires.</p>
+                    <div class="flex-1">
+                        <div
+                            class="w-14 h-14 bg-teal-100/50 rounded-2xl flex items-center justify-center text-teal-600 mb-6 group-hover:bg-teal-600 group-hover:text-white transition-colors duration-300 shadow-sm">
+                            <flux:icon name="users" class="size-7" />
+                        </div>
+                        <h3 class="text-2xl font-bold text-zinc-900 mb-3 tracking-tight">Portails Dédiés</h3>
+                        <p class="text-zinc-500 leading-relaxed">Offrez une expérience premium. Vos locataires accèdent
+                            à leurs baux et factures ; vos propriétaires suivent la rentabilité en temps réel.</p>
+                    </div>
+                    <div class="hidden lg:block w-48 relative">
+                        <!-- Tiny mock graphic -->
+                        <div
+                            class="bg-zinc-50 rounded-xl p-4 border border-zinc-100 shadow-inner rotate-3 group-hover:rotate-6 transition-transform">
+                            <div class="flex gap-2 mb-3">
+                                <div class="size-8 rounded-full bg-teal-100"></div>
+                                <div class="space-y-1.5 flex-1 pt-1">
+                                    <div class="h-2 bg-zinc-200 rounded w-full"></div>
+                                    <div class="h-2 bg-zinc-200 rounded w-2/3"></div>
+                                </div>
+                            </div>
+                            <div
+                                class="h-16 bg-white rounded border border-zinc-100 mt-2 flex items-center justify-center">
+                                <flux:icon name="document-text" class="size-6 text-teal-400/50" />
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Feature 5 -->
-                <div class="bg-white p-6 rounded-[6px] text-center transition-all duration-300 group hover:-translate-y-1"
-                    style="box-shadow: rgba(218, 222, 232, 0.4) -8px 12px 18px 0px; border: 1px solid #f0f0f0;">
+                <!-- BENTO 5: Analytique (Span 2) -->
+                <div class="md:col-span-2 bg-white rounded-3xl p-8 lg:p-10 border border-zinc-200/60 shadow-xl shadow-zinc-200/20 hover:shadow-2xl hover:border-orange-500/30 transition-all duration-300 group relative overflow-hidden flex flex-col justify-between"
+                    x-show="shown" x-transition:enter="transition ease-out duration-700 delay-500"
+                    x-transition:enter-start="opacity-0 translate-y-12"
+                    x-transition:enter-end="opacity-100 translate-y-0" x-cloak>
                     <div
-                        class="w-16 h-16 bg-orange-100 rounded-lg flex items-center justify-center text-orange-600 mb-6 mx-auto group-hover:bg-orange-600 group-hover:text-white transition-colors duration-300">
-                        <flux:icon name="chart-bar" class="w-8 h-8" />
+                        class="absolute right-0 top-0 w-40 h-40 bg-orange-50/50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500">
                     </div>
-                    <h3 class="text-xl font-bold text-[rgb(3,27,78)] mb-3">Analytique</h3>
-                    <p class="text-zinc-500 leading-relaxed">Tableaux de bord en temps réel. Suivez vos taux
-                        d'occupation.</p>
+                    <div>
+                        <div
+                            class="w-14 h-14 bg-orange-100/50 rounded-2xl flex items-center justify-center text-orange-600 mb-6 group-hover:bg-orange-600 group-hover:text-white transition-colors duration-300 shadow-sm">
+                            <flux:icon name="chart-bar" class="size-7" />
+                        </div>
+                        <h3 class="text-2xl font-bold text-zinc-900 mb-3 tracking-tight">Analytique & Performance</h3>
+                        <p class="text-zinc-500 leading-relaxed max-w-sm">Décisions basées sur les données. Suivez
+                            précisément vos taux d'occupation, revenus et impayés via des tableaux de bord dynamiques.
+                        </p>
+                    </div>
                 </div>
 
-                <!-- Feature 6 -->
-                <div class="bg-white p-6 rounded-[6px] text-center transition-all duration-300 group hover:-translate-y-1"
-                    style="box-shadow: rgba(218, 222, 232, 0.4) -8px 12px 18px 0px; border: 1px solid #f0f0f0;">
+                <!-- BENTO 6: Sécurité (Span 1) -->
+                <div class="md:col-span-1 bg-white rounded-3xl p-8 lg:p-10 border border-zinc-200/60 shadow-xl shadow-zinc-200/20 hover:shadow-2xl hover:border-cyan-500/30 transition-all duration-300 group relative overflow-hidden flex flex-col justify-between"
+                    x-show="shown" x-transition:enter="transition ease-out duration-700 delay-600"
+                    x-transition:enter-start="opacity-0 translate-y-12"
+                    x-transition:enter-end="opacity-100 translate-y-0" x-cloak>
                     <div
-                        class="w-16 h-16 bg-cyan-100 rounded-lg flex items-center justify-center text-cyan-600 mb-6 mx-auto group-hover:bg-cyan-600 group-hover:text-white transition-colors duration-300">
-                        <flux:icon name="shield-check" class="w-8 h-8" />
+                        class="absolute right-0 bottom-0 w-32 h-32 bg-cyan-50/50 rounded-tl-full -z-10 group-hover:scale-110 transition-transform duration-500">
                     </div>
-                    <h3 class="text-xl font-bold text-[rgb(3,27,78)] mb-3">Sécurité</h3>
-                    <p class="text-zinc-500 leading-relaxed">Données chiffrées, sauvegardes automatiques et respect des
-                        normes RGPD.</p>
+                    <div>
+                        <div
+                            class="w-14 h-14 bg-cyan-100/50 rounded-2xl flex items-center justify-center text-cyan-600 mb-6 group-hover:bg-cyan-600 group-hover:text-white transition-colors duration-300 shadow-sm">
+                            <flux:icon name="shield-check" class="size-7" />
+                        </div>
+                        <h3 class="text-2xl font-bold text-zinc-900 mb-3 tracking-tight">Haute Sécurité</h3>
+                        <p class="text-zinc-500 leading-relaxed">Chiffrement de bout en bout et sauvegardes garanties.
+                        </p>
+                    </div>
                 </div>
+
             </div>
         </div>
     </section>
@@ -381,23 +539,25 @@ new #[Layout('layouts.guest')] class extends Component {
                 </nav>
             </div>
 
-            <!-- Pricing Grid Container (Flat Box) -->
-            <div class="max-w-7xl mx-auto border border-zinc-200 rounded-lg overflow-hidden bg-white shadow-none">
-                <div class="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-zinc-100">
+            <!-- Pricing Grid Container -->
+            <div class="max-w-6xl mx-auto mt-12" x-data="{ shown: false }" x-intersect.once="shown = true">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center" x-show="shown"
+                    x-transition:enter="transition ease-out duration-700 delay-200"
+                    x-transition:enter-start="opacity-0 translate-y-12"
+                    x-transition:enter-end="opacity-100 translate-y-0" x-cloak>
 
                     @foreach ($this->plans as $plan)
                         @php
                             $isPremium = $loop->last; // Assuming last plan is Premium
-                            // Add flex flex-col h-full to ensure full height and vertical stacking
-                            $baseClass = $isPremium ? 'relative overflow-hidden bg-zinc-50/30' : 'hover:bg-zinc-50/50 transition-colors';
-                            $wrapperClass = "p-8 flex flex-col h-full $baseClass";
+                            $baseClass = $isPremium ? 'relative bg-white border-2 border-[rgb(1,98,232)] shadow-[0_0_40px_rgba(1,98,232,0.15)] lg:scale-105 z-10' : 'bg-white border border-zinc-200 hover:border-[rgb(1,98,232)]/50 shadow-xl shadow-zinc-200/40 hover:-translate-y-1';
+                            $wrapperClass = "p-8 rounded-3xl flex flex-col h-full transition-all duration-300 $baseClass";
                             $titleColor = $isPremium ? 'text-[rgb(1,98,232)]' : 'text-zinc-900';
 
                             // Map icons based on index or name
                             $iconName = match ($loop->index) {
                                 0 => 'tag',
                                 1 => 'hand-thumb-up',
-                                2 => 'sparkles',
+                                2 => 'star',
                                 default => 'tag'
                             };
                         @endphp
@@ -405,10 +565,11 @@ new #[Layout('layouts.guest')] class extends Component {
                         <div class="{{ $wrapperClass }}">
                             @if($isPremium)
                                 <!-- Ribbon -->
-                                <div class="absolute top-0 right-0">
+                                <div class="absolute top-0 inset-x-0 flex justify-center -translate-y-1/2">
                                     <div
-                                        class="bg-[rgb(1,98,232)] text-white text-[0.65rem] font-bold px-8 py-1 transform rotate-45 translate-x-8 translate-y-3 shadow-sm z-20">
-                                        10% Off
+                                        class="bg-[rgb(1,98,232)] text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-md flex items-center gap-1.5 uppercase tracking-wide">
+                                        <flux:icon name="sparkles" class="size-3.5" />
+                                        Plan Populaire
                                     </div>
                                 </div>
                             @endif
