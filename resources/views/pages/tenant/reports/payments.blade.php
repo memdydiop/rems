@@ -184,9 +184,7 @@ new
 
         <!-- Monthly Trend Chart -->
         <x-flux::card class="mb-6">
-            <x-flux::card.header>
-                <x-flux::card.title>Tendance Mensuelle {{ $this->year }}</x-flux::card.title>
-            </x-flux::card.header>
+            <x-flux::card.header title="Tendance Mensuelle {{ $this->year }}" />
             <div class="p-4 h-64" x-data="{
                 init() {
                     const options = {
@@ -209,9 +207,7 @@ new
 
         <!-- Payments Table -->
         <x-flux::card>
-            <x-flux::card.header>
-                <x-flux::card.title>Détail des Paiements ({{ $this->stats['count'] }})</x-flux::card.title>
-            </x-flux::card.header>
+            <x-flux::card.header title="Détail des Paiements ({{ $this->stats['count'] }})" />
             <x-flux::table>
                 <x-flux::table.columns>
                     <x-flux::table.column>Date</x-flux::table.column>

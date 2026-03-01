@@ -105,9 +105,7 @@ new #[Layout('layouts.app', ['title' => 'Billing'])] class extends Component {
 
         @if($currentSubscription && $currentSubscription->status === 'active')
             <x-flux::card class="mb-6">
-                <x-flux::card.header>
-                    <x-flux::card.title>Abonnement Actuel</x-flux::card.title>
-                </x-flux::card.header>
+                <x-flux::card.header title="Abonnement Actuel" />
                 <div class="p-4">
                     <p>Vous êtes abonné au forfait <strong>{{ $currentSubscription->plan->name }}</strong>.</p>
                     <p class="text-sm text-zinc-500">Expire le :
@@ -175,71 +173,103 @@ new #[Layout('layouts.app', ['title' => 'Billing'])] class extends Component {
                     @php
                         $isCurrent = $currentSubscription && $currentSubscription->plan_id === $plan->id;
                     @endphp
-                    <x-flux::card
-                        class="flex flex-col gap-4 transition-all duration-300 hover:shadow-lg {{ $isCurrent ? 'ring-2 ring-indigo-500 bg-indigo-50/50' : 'hover:border-zinc-300' }}">
+                    @php
+                        $isPremium = ($plan->paystack_code === 'PLN_business' || $plan->paystack_code === 'PLN_business_yearly');
+                        $isCurrent = $currentSubscription && $currentSubscription->plan_id === $plan->id;
 
-                        <div class="flex justify-between items-start">
-                            <h3 class="text-lg font-bold text-zinc-900">
-                                {{ str_replace(['(Yearly)', '(Free)', '(Annuel)'], '', $plan->name) }}
-                            </h3>
-                            @if($plan->paystack_code === 'PLN_growth' || $plan->paystack_code === 'PLN_growth_yearly')
-                                <span
-                                    class="px-2.5 py-0.5 rounded-full bg-linear-to-r from-violet-500 to-indigo-600 text-[10px] font-bold text-white shadow-sm uppercase tracking-wide">
+                        $baseClass = $isPremium ? 'relative bg-white border-2 border-[rgb(1,98,232)] shadow-[0_0_40px_rgba(1,98,232,0.15)] lg:scale-105 z-10' : 'bg-white border border-zinc-200 hover:border-[rgb(1,98,232)]/50 shadow-xl shadow-zinc-200/40 hover:-translate-y-1';
+                        if ($isCurrent && !$isPremium) {
+                            $baseClass .= ' ring-2 ring-emerald-500 bg-emerald-50/10';
+                        }
+                        $wrapperClass = "p-8 rounded-3xl flex flex-col h-full transition-all duration-300 $baseClass";
+                        $titleColor = $isPremium ? 'text-[rgb(1,98,232)]' : 'text-zinc-900';
+
+                        // Map icons
+                        $iconName = match ($loop->index) {
+                            0 => 'tag',
+                            1 => 'hand-thumb-up',
+                            2 => 'star',
+                            default => 'tag'
+                        };
+                    @endphp
+
+                    <div class="{{ $wrapperClass }}">
+                        @if($isPremium)
+                            <!-- Ribbon -->
+                            <div class="absolute top-0 inset-x-0 flex justify-center -translate-y-1/2">
+                                <div
+                                    class="bg-[rgb(1,98,232)] text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-md flex items-center gap-1.5 uppercase tracking-wide">
+                                    <flux:icon name="sparkles" class="size-3.5" />
                                     Populaire
+                                </div>
+                            </div>
+                        @endif
+
+                        @if($isCurrent)
+                            <div class="absolute top-4 right-4">
+                                <flux:badge color="green" size="sm" class="shadow-sm">Actuel</flux:badge>
+                            </div>
+                        @endif
+
+                        <h6 class="font-semibold text-center text-lg {{ $titleColor }} mb-4 uppercase tracking-wider">
+                            {{ str_replace(['(Yearly)', '(Free)', '(Annuel)'], '', $plan->name) }}
+                        </h6>
+
+                        <div class="py-6 flex items-center justify-center gap-6">
+                            <div class="p-3 bg-[rgba(1,98,232,0.1)] rounded-full text-[rgb(1,98,232)]">
+                                <flux:icon :name="$iconName" class="w-6 h-6" />
+                            </div>
+                            <div class="text-right">
+                                <span class="text-[1.5625rem] font-semibold mb-0 text-zinc-900">
+                                    {{ $plan->amount == 0 ? 'Gratuit' : Number::currency($plan->amount / 100, $plan->currency) }}
                                 </span>
-                            @endif
-                            @if($isCurrent)
-                                <flux:badge color="green" size="sm">Actuel</flux:badge>
-                            @endif
+                                @if($plan->amount > 0)
+                                    <span class="text-[#8c9097] text-xs font-semibold mb-0">
+                                        / {{ $plan->interval === 'monthly' ? 'mois' : 'an' }}
+                                    </span>
+                                @endif
+                            </div>
                         </div>
 
-                        <div class="flex items-baseline gap-1">
-                            <span
-                                class="text-3xl font-bold text-zinc-900">{{ $plan->amount == 0 ? 'Gratuit' : Number::currency($plan->amount / 100, $plan->currency) }}</span>
-                            @if($plan->amount > 0)
-                                <span class="text-sm font-medium text-zinc-500">/
-                                    {{ $plan->interval === 'monthly' ? 'mois' : 'an' }}</span>
-                            @endif
-                        </div>
+                        <p class="text-[0.85rem] text-zinc-500 text-center mb-6 h-10">{{ $plan->description }}</p>
 
-                        <p class="text-sm text-zinc-500 line-clamp-2">{{ $plan->description }}</p>
+                        <div class="h-px bg-zinc-200/50 mb-6 w-full"></div>
 
-                        <div class="h-px bg-zinc-200/50 my-2"></div>
-
-                        <ul class="space-y-3 mb-4 flex-1">
+                        <ul class="space-y-4 mb-8 flex-1 text-[0.85rem] text-left px-4">
                             @if($plan->display_features)
                                 @foreach ($plan->display_features as $feature)
                                     <li class="flex items-start gap-3">
-                                        <div class="mt-0.5 rounded-full bg-blue-50 p-0.5">
-                                            <flux:icon name="check" size="xs" class="text-blue-500" />
-                                        </div>
-                                        <span class="text-sm text-zinc-600">{{ $feature }}</span>
+                                        <flux:icon name="check-circle" variant="solid"
+                                            class="size-4 text-[rgb(1,98,232)] shrink-0 mt-0.5" />
+                                        <span class="text-zinc-600">{{ $feature }}</span>
                                     </li>
                                 @endforeach
                             @else
-                                <li class="text-sm text-zinc-400 italic">Aucune fonctionnalité spécifique listée.</li>
+                                <li class="text-zinc-400 italic text-center">Aucune fonctionnalité spécifique listée.</li>
                             @endif
                         </ul>
 
-                        <flux:spacer />
-
-                        @if($isCurrent)
-                            <flux:button disabled class="w-full bg-white border-zinc-200 text-zinc-400 cursor-not-allowed">
-                                Forfait actuel</flux:button>
-                        @else
-                            @php
-                                $buttonLabel = "S'abonner";
-                                if ($currentSubscription) {
-                                    $buttonLabel = $plan->amount >= $currentSubscription->plan->amount ? 'Améliorer' : 'Rétrograder';
-                                }
-                            @endphp
-                            <flux:button variant="primary" class="w-full shadow-sm hover:shadow-md transition-shadow"
-                                wire:click="subscribe({{ $plan->id }})"
-                                wire:confirm="Êtes-vous sûr de vouloir changer de forfait ?">
-                                {{ $buttonLabel }}
-                            </flux:button>
-                        @endif
-                    </x-flux::card>
+                        <div class="mt-auto pt-4">
+                            @if($isCurrent)
+                                <button disabled
+                                    class="w-full py-3 px-4 rounded-xl font-semibold text-sm transition-all duration-200 bg-zinc-100 text-zinc-400 cursor-not-allowed">
+                                    Forfait actuel
+                                </button>
+                            @else
+                                @php
+                                    $buttonLabel = "S'abonner";
+                                    if ($currentSubscription) {
+                                        $buttonLabel = $plan->amount >= $currentSubscription->plan->amount ? 'Améliorer' : 'Rétrograder';
+                                    }
+                                @endphp
+                                <button wire:click="subscribe({{ $plan->id }})"
+                                    wire:confirm="Êtes-vous sûr de vouloir changer de forfait ?"
+                                    class="w-full py-3 px-4 rounded-xl font-semibold text-sm transition-all duration-200 {{ $isPremium ? 'bg-[rgb(1,98,232)] hover:bg-[#0152c2] text-white shadow-lg shadow-[rgba(1,98,232,0.3)] hover:-translate-y-0.5' : 'bg-zinc-900 hover:bg-zinc-800 text-white shadow-md hover:-translate-y-0.5' }}">
+                                    {{ $buttonLabel }}
+                                </button>
+                            @endif
+                        </div>
+                    </div>
                 @empty
                     <div class="col-span-3 text-center py-12">
                         <div class="inline-flex items-center justify-center size-12 rounded-full bg-zinc-100 mb-4">

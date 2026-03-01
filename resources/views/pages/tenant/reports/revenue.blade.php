@@ -197,9 +197,7 @@ new
 
         <!-- Chart -->
         <x-flux::card class="mb-6">
-            <x-flux::card.header>
-                <x-flux::card.title>Évolution des Revenus</x-flux::card.title>
-            </x-flux::card.header>
+            <x-flux::card.header title="Évolution des Revenus" />
             <div class="p-4 h-80" x-data="{
                 init() {
                     const options = {
@@ -227,9 +225,7 @@ new
 
         <!-- Monthly Breakdown Table -->
         <x-flux::card>
-            <x-flux::card.header>
-                <x-flux::card.title>Détail Mensuel</x-flux::card.title>
-            </x-flux::card.header>
+            <x-flux::card.header title="Détail Mensuel" />
             <x-flux::table>
                 <x-flux::table.columns>
                     <x-flux::table.column>Mois</x-flux::table.column>

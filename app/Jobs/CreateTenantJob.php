@@ -73,9 +73,13 @@ class CreateTenantJob implements ShouldQueue
                     'password' => Hash::make($this->password), // Use provided password
                 ]);
 
+                $appUrl = config('app.url');
+                $parsedUrl = parse_url($appUrl);
+                $port = isset($parsedUrl['port']) ? ':' . $parsedUrl['port'] : '';
+                $scheme = isset($parsedUrl['scheme']) ? $parsedUrl['scheme'] . '://' : ($this->isSecure() ? 'https://' : 'http://');
+
                 // Send welcome email with login link
-                $protocol = $this->isSecure() ? 'https://' : 'http://';
-                $tenantUrl = $protocol . $fullDomain . '/login';
+                $tenantUrl = $scheme . $fullDomain . $port . '/login';
 
                 $user->notify(new \App\Notifications\WelcomeTenantNotification($tenantUrl));
             });

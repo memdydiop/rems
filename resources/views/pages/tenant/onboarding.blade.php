@@ -15,7 +15,7 @@ new
     // Step 1: Property
     public string $propertyName = '';
     public string $propertyAddress = '';
-    public string $propertyType = 'residential';
+    public string $propertyType = 'apartment';
 
     // Step 2: Unit
     public string $unitName = '';
@@ -163,9 +163,11 @@ new
                             <flux:input label="Adresse" wire:model="propertyAddress"
                                 placeholder="Ex: 123 Rue Principale" />
                             <flux:select label="Type" wire:model="propertyType">
-                                <flux:select.option value="residential">Résidentiel</flux:select.option>
-                                <flux:select.option value="commercial">Commercial</flux:select.option>
-                                <flux:select.option value="mixed">Mixte</flux:select.option>
+                                <flux:select.option value="apartment">Appartement</flux:select.option>
+                                <flux:select.option value="house">Maison</flux:select.option>
+                                <flux:select.option value="office">Bureau</flux:select.option>
+                                <flux:select.option value="retail">Commerce</flux:select.option>
+                                <flux:select.option value="warehouse">Entrepôt</flux:select.option>
                             </flux:select>
                         </div>
                     </div>

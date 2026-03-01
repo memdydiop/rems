@@ -71,9 +71,7 @@ new
         <!-- Comparison Chart -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             <x-flux::card>
-                <x-flux::card.header>
-                    <x-flux::card.title>Revenus par Propriété</x-flux::card.title>
-                </x-flux::card.header>
+                <x-flux::card.header title="Revenus par Propriété" />
                 <div class="p-4 h-80" x-data="{
                     init() {
                         const options = {
@@ -100,9 +98,7 @@ new
             </x-flux::card>
 
             <x-flux::card>
-                <x-flux::card.header>
-                    <x-flux::card.title>Taux d'Occupation</x-flux::card.title>
-                </x-flux::card.header>
+                <x-flux::card.header title="Taux d'Occupation" />
                 <div class="p-4 h-80" x-data="{
                     init() {
                         const options = {
@@ -130,9 +126,7 @@ new
 
         <!-- Properties Table -->
         <x-flux::card>
-            <x-flux::card.header>
-                <x-flux::card.title>Détail par Propriété</x-flux::card.title>
-            </x-flux::card.header>
+            <x-flux::card.header title="Détail par Propriété" />
             <x-flux::table>
                 <x-flux::table.columns>
                     <x-flux::table.column>Propriété</x-flux::table.column>

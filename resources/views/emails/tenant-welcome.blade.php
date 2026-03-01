@@ -10,8 +10,16 @@
     <p><strong>Votre domaine :</strong> {{ $domain }}</p>
 </div>
 
+@php
+    $appUrl = config('app.url');
+    $parsedUrl = parse_url($appUrl);
+    $port = isset($parsedUrl['port']) ? ':' . $parsedUrl['port'] : '';
+    $protocol = isset($parsedUrl['scheme']) ? $parsedUrl['scheme'] . '://' : 'http://';
+    $fullUrl = $protocol . $domain . $port;
+@endphp
+
 <p style="text-align: center;">
-    <a href="http://{{ $domain }}" class="button">Accéder à mon espace</a>
+    <a href="{{ $fullUrl }}" class="button">Accéder à mon espace</a>
 </p>
 
 <p>Voici ce que vous pouvez faire dès maintenant :</p>

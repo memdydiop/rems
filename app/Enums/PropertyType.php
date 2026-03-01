@@ -48,7 +48,6 @@ enum PropertyType: string
             self::Parking => 'Parking',
         };
     }
-
     public function color(): string
     {
         return match ($this) {

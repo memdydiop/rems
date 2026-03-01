@@ -49,9 +49,7 @@ new #[Layout('layouts.app', ['title' => 'Project Details'])] class extends Compo
         </x-slot:actions>
 
         <x-flux::card>
-            <x-flux::card.header>
-                <x-flux::card.title>Tâches</x-flux::card.title>
-            </x-flux::card.header>
+            <x-flux::card.header title="Tâches" />
 
             <x-flux::table :paginate="$tasks">
                 <x-flux::table.columns>

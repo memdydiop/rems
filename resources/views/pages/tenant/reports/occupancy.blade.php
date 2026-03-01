@@ -130,9 +130,7 @@ new
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             <!-- Occupancy Chart -->
             <x-flux::card>
-                <x-flux::card.header>
-                    <x-flux::card.title>Répartition</x-flux::card.title>
-                </x-flux::card.header>
+                <x-flux::card.header title="Répartition" />
                 <div class="p-4 h-64" x-data="{
                     init() {
                         const options = {
@@ -163,9 +161,7 @@ new
 
             <!-- By Property Chart -->
             <x-flux::card>
-                <x-flux::card.header>
-                    <x-flux::card.title>Par Propriété</x-flux::card.title>
-                </x-flux::card.header>
+                <x-flux::card.header title="Par Propriété" />
                 <div class="p-4 h-64" x-data="{
                     init() {
                         const options = {
@@ -193,9 +189,7 @@ new
 
         <!-- Vacant Units Table -->
         <x-flux::card>
-            <x-flux::card.header>
-                <x-flux::card.title>Unités Vacantes</x-flux::card.title>
-            </x-flux::card.header>
+            <x-flux::card.header title="Unités Vacantes" />
             <x-flux::table>
                 <x-flux::table.columns>
                     <x-flux::table.column>Propriété</x-flux::table.column>

@@ -16,14 +16,14 @@ return [
      *
      * Only relevant if you're using the domain or subdomain identification middleware.
      */
-    'central_domains' => array_filter(array_merge(
+    'central_domains' => array_values(array_unique(array_filter(array_merge(
         explode(',', env('CENTRAL_DOMAINS', '')),
         [
             '127.0.0.1',
             'localhost',
-            '192.168.1.15.nip.io:8000',
+            '192.168.1.15.nip.io',
         ]
-    )),
+    )))),
 
     /**
      * Tenancy bootstrappers are executed when tenancy is initialized.

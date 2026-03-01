@@ -73,9 +73,7 @@ new
             <!-- Template Selector -->
             <div class="lg:col-span-1">
                 <x-flux::card>
-                    <x-flux::card.header>
-                        <x-flux::card.title>Templates</x-flux::card.title>
-                    </x-flux::card.header>
+                    <x-flux::card.header title="Templates" />
                     <div class="p-4 space-y-2">
                         <button wire:click="$set('selectedTemplate', 'welcome')"
                             class="w-full text-left px-4 py-3 rounded-lg transition-colors {{ $selectedTemplate === 'welcome' ? 'bg-blue-50 text-blue-700 font-medium' : 'hover:bg-zinc-50' }}">
@@ -115,9 +113,7 @@ new
             <!-- Email Preview -->
             <div class="lg:col-span-3">
                 <x-flux::card>
-                    <x-flux::card.header>
-                        <x-flux::card.title>Aperçu</x-flux::card.title>
-                    </x-flux::card.header>
+                    <x-flux::card.header title="Aperçu" />
                     <div class="p-4">
                         <div class="border border-zinc-200 rounded-lg overflow-hidden">
                             <!-- Email Header Bar -->
