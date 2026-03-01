@@ -48,29 +48,52 @@ new
 
         return MaintenanceRequest::where('unit_id', $unit->id)
             ->orderByDesc('created_at')
-            ->take(5)
+            ->take(4)
             ->get();
+    }
+
+    #[Computed]
+    public function hasPaidCurrentMonth()
+    {
+        if (!$this->activeLease) {
+            return false;
+        }
+
+        $currentMonth = now()->format('Y-m');
+        return $this->activeLease->payments()
+            ->whereRaw("to_char(paid_at, 'YYYY-MM') = ?", [$currentMonth])
+            ->where('status', 'completed')
+            ->exists();
     }
 };
 ?>
 
 <div class="min-h-screen bg-zinc-50 pb-12">
-    <!-- Hero Section -->
-    <div class="bg-white border-b border-zinc-200 pb-32 pt-12">
-        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center">
+    <!-- Hero Section avec effet "Waouh" -->
+    <div class="relative bg-zinc-900 border-b border-zinc-200 pb-32 pt-16 overflow-hidden">
+        <!-- Background Gradient / Glow Elements -->
+        <div class="absolute inset-0 overflow-hidden pointer-events-none">
+            <div
+                class="absolute -top-1/2 -right-1/4 w-full h-full bg-linear-to-bl from-indigo-500/20 to-transparent blur-3xl rounded-full">
+            </div>
+            <div
+                class="absolute bottom-0 left-0 w-1/2 h-1/2 bg-linear-to-tr from-emerald-500/20 to-transparent blur-3xl rounded-full">
+            </div>
+        </div>
+
+        <div class="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div>
-                    <p class="text-zinc-500 font-medium mb-1">Espace Locataire</p>
-                    <h1 class="text-3xl md:text-4xl font-bold text-zinc-900">Bonjour, {{ $this->renter?->first_name }}
+                    <h1 class="text-4xl md:text-5xl font-bold text-white tracking-tight">Bonjour,
+                        {{ $this->renter?->first_name }} 👋
                     </h1>
+                    <p class="text-zinc-400 font-medium mt-2 text-lg">Bienvenue sur votre espace locataire personnel.
+                    </p>
                 </div>
                 <div class="flex items-center gap-3">
-                    <flux:button variant="filled" class="bg-emerald-600 hover:bg-emerald-700 text-white"
-                        href="{{ route('renter.pay') }}" icon="credit-card">
-                        Payer mon loyer
-                    </flux:button>
-                    <flux:button variant="subtle" class="hover:bg-zinc-100 border-zinc-200" href="{{ route('logout') }}"
-                        icon="arrow-right-start-on-rectangle">
+                    <flux:button variant="subtle"
+                        class="text-white hover:bg-zinc-800 border-zinc-700 bg-zinc-800/50 backdrop-blur-sm"
+                        href="{{ route('logout') }}" icon="arrow-right-start-on-rectangle">
                         Déconnexion
                     </flux:button>
                 </div>
@@ -78,118 +101,223 @@ new
         </div>
     </div>
 
-    <!-- Main Content (Overlapping Hero) -->
-    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 -mt-24 space-y-6">
+    <!-- Main Content (Overlapping Hero) - Bento Grid Structure -->
+    <div class="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 -mt-20 space-y-6">
 
         @if($this->activeLease)
-            <!-- Lease Card (Hero) -->
-            <div
-                class="bg-white rounded-2xl shadow-xl border border-zinc-100 p-6 md:p-8 flex flex-col md:flex-row gap-8 items-center justify-between">
-                <div class="flex items-center gap-6 w-full">
-                    <div class="size-20 rounded-2xl bg-indigo-50 flex items-center justify-center shrink-0">
-                        <flux:icon.home class="size-10 text-indigo-600" />
+
+            <!-- Bento Row 1: Status & Quick Actions -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+                <!-- Status Card (Col Span 2) -->
+                <div
+                    class="md:col-span-2 bg-white rounded-3xl shadow-xl shadow-zinc-200/50 border border-zinc-100 p-8 flex flex-col sm:flex-row gap-6 items-center justify-between ring-1 ring-zinc-900/5 transition-transform hover:-translate-y-1">
+                    <div class="flex items-center gap-6 w-full">
+                        <div
+                            class="size-20 rounded-2xl {{ $this->hasPaidCurrentMonth ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-600' }} flex items-center justify-center shrink-0 shadow-inner">
+                            @if($this->hasPaidCurrentMonth)
+                                <flux:icon.check-badge class="size-10" />
+                            @else
+                                <flux:icon.exclamation-circle class="size-10" />
+                            @endif
+                        </div>
+                        <div>
+                            <flux:badge size="sm" inset="top bottom" class="mb-2"
+                                :color="$this->hasPaidCurrentMonth ? 'emerald' : 'orange'">
+                                {{ $this->hasPaidCurrentMonth ? 'Loyer du mois réglé' : 'Loyer en attente' }}
+                            </flux:badge>
+                            <h2 class="text-2xl font-bold text-zinc-900 tracking-tight">
+                                {{ number_format($this->activeLease->rent_amount, 0, ',', ' ') }} XOF
+                            </h2>
+                            <p class="text-zinc-500 font-medium mt-1">Loyer mensuel • {{ now()->translatedFormat('F Y') }}
+                            </p>
+                        </div>
                     </div>
-                    <div>
-                        <h2 class="text-xl font-bold text-zinc-900">{{ $this->activeLease->unit?->property?->name }}</h2>
-                        <p class="text-lg text-zinc-600">{{ $this->activeLease->unit?->name }}</p>
-                        <p class="text-zinc-400 mt-1 flex items-center gap-1">
-                            <flux:icon.map-pin class="size-4" />
-                            {{ $this->activeLease->unit?->property?->address }}
-                        </p>
+
+                    <div class="w-full md:w-auto shrink-0 mt-4 sm:mt-0">
+                        @if($this->hasPaidCurrentMonth)
+                            <div class="text-center px-6 py-4 rounded-2xl bg-zinc-50 border border-zinc-100">
+                                <p class="text-sm font-semibold text-emerald-600">Tout est en ordre !</p>
+                                <p class="text-xs text-zinc-500 mt-1">Merci pour votre ponctualité.</p>
+                            </div>
+                        @else
+                            <flux:button variant="filled"
+                                class="w-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/30 rounded-full px-8 py-2 md:py-3 transition-all hover:scale-105"
+                                href="{{ route('renter.pay') }}" icon="credit-card">
+                                Payer maintenant
+                            </flux:button>
+                        @endif
                     </div>
                 </div>
 
-                <div
-                    class="flex flex-row md:flex-col gap-4 w-full md:w-auto border-t md:border-t-0 md:border-l border-zinc-100 pt-6 md:pt-0 md:pl-8">
-                    <div>
-                        <p class="text-xs font-semibold uppercase tracking-wider text-zinc-400">Loyer Mensuel</p>
-                        <p class="text-3xl font-bold text-zinc-900">
-                            {{ number_format($this->activeLease->rent_amount, 0, ',', ' ') }} <span
-                                class="text-sm font-normal text-zinc-500">XOF</span>
-                        </p>
+                <!-- Quick Action: Maintenance -->
+                <div class="bg-linear-to-br from-indigo-500 to-indigo-600 rounded-3xl shadow-xl shadow-indigo-500/20 p-8 flex flex-col justify-between text-white relative overflow-hidden group cursor-pointer ring-1 ring-white/20 transition-transform hover:-translate-y-1"
+                    x-on:click="Flux.modal('create-maintenance').show()">
+                    <div
+                        class="absolute top-0 right-0 -mr-8 -mt-8 opacity-20 transform group-hover:scale-110 transition-transform duration-500">
+                        <flux:icon.wrench-screwdriver class="size-48" />
                     </div>
-                    <div>
-                        <flux:badge color="green" size="sm" inset="top bottom">Bail Actif</flux:badge>
+                    <div class="relative z-10">
+                        <div
+                            class="size-12 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center mb-6 shadow-sm border border-white/10">
+                            <flux:icon.lifebuoy class="size-6 text-white" />
+                        </div>
+                        <h3 class="text-xl font-bold tracking-tight">Un souci ?</h3>
+                        <p class="text-indigo-100 text-sm mt-1">Signaler un problème technique (fuite, électricité...)</p>
                     </div>
                 </div>
+
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- Payments -->
-                <x-flux::card class="border-0 shadow-lg ring-1 ring-zinc-200/50">
-                    <x-flux::card.header>
-                        <div class="flex items-center gap-3">
-                            <div class="p-2 bg-green-50 rounded-lg text-green-600">
-                                <flux:icon.credit-card class="size-5" />
-                            </div>
-                            <x-flux::card.title>Derniers Paiements</x-flux::card.title>
-                        </div>
-                    </x-flux::card.header>
+            <!-- Bento Row 2: Property Info & History -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-                    <div class="mt-4 space-y-4">
-                        @forelse($this->recentPayments as $payment)
-                            <div
-                                class="flex items-center justify-between p-3 rounded-lg hover:bg-zinc-50 transition-colors border border-transparent hover:border-zinc-100">
-                                <div>
-                                    <p class="font-bold text-zinc-900">{{ number_format($payment->amount, 0, ',', ' ') }} XOF
+                <!-- Property Details (Col 1) -->
+                <div
+                    class="bg-white rounded-3xl shadow-lg shadow-zinc-200/50 border border-zinc-100 p-8 flex flex-col relative overflow-hidden group">
+                    <div
+                        class="absolute top-0 right-0 p-6 opacity-5 backdrop-blur-3xl transform group-hover:rotate-12 transition-transform duration-700">
+                        <flux:icon.home-modern class="w-64 h-64" />
+                    </div>
+                    <div class="relative z-10">
+                        <h3 class="font-bold text-zinc-900 text-lg flex items-center gap-2 mb-6">
+                            <flux:icon.building-office class="size-5 text-zinc-400" /> Mon Logement
+                        </h3>
+
+                        <div class="space-y-4">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wider text-zinc-400">Propriété</p>
+                                <p class="text-zinc-900 font-medium">{{ $this->activeLease->unit?->property?->name }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wider text-zinc-400">Unité</p>
+                                <p class="text-zinc-900 font-medium">{{ $this->activeLease->unit?->name }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wider text-zinc-400">Adresse</p>
+                                <p class="text-zinc-600 text-sm flex items-start gap-1 mt-1">
+                                    <flux:icon.map-pin class="size-4 shrink-0 mt-0.5" />
+                                    {{ $this->activeLease->unit?->property?->address }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="mt-8 pt-6 border-t border-zinc-100">
+                            <p class="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-3">Documents du bail
+                            </p>
+                            <flux:button variant="ghost" size="sm"
+                                class="w-full text-zinc-600 bg-zinc-50 border border-zinc-200 rounded-xl"
+                                icon="document-arrow-down">
+                                Télécharger le contrat
+                            </flux:button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Last Payments + Maintenance Tickets (Col 2 & 3) -->
+                <div class="lg:col-span-2 space-y-6 flex flex-col">
+
+                    <!-- Payments -->
+                    <div
+                        class="bg-white rounded-3xl shadow-lg shadow-zinc-200/50 border border-zinc-100 flex-1 overflow-hidden flex flex-col">
+                        <div class="px-6 py-5 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
+                            <h3 class="font-bold text-zinc-900 flex items-center gap-2">
+                                <flux:icon.banknotes class="size-5 text-emerald-500" /> Historique des Paiements
+                            </h3>
+                            <flux:button variant="ghost" size="xs" class="text-zinc-500"
+                                href="{{ route('renter.payments') }}">Voir tout</flux:button>
+                        </div>
+                        <div class="p-2 flex-1 relative flex flex-col justify-center">
+                            @if($this->recentPayments->count() > 0)
+                                <div class="divide-y divide-zinc-50">
+                                    @foreach($this->recentPayments as $payment)
+                                        <div
+                                            class="flex items-center justify-between p-4 hover:bg-zinc-50/80 transition-colors rounded-2xl">
+                                            <div class="flex items-center gap-4">
+                                                <div
+                                                    class="size-10 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
+                                                    <flux:icon.check class="size-5 text-emerald-600" />
+                                                </div>
+                                                <div>
+                                                    <p class="font-bold text-zinc-900">
+                                                        {{ number_format($payment->amount, 0, ',', ' ') }} XOF
+                                                    </p>
+                                                    <p class="text-xs font-medium text-zinc-500">
+                                                        {{ $payment->paid_at?->translatedFormat('d F Y') }}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <flux:button size="sm" icon="document-text"
+                                                class="rounded-xl border-zinc-200 text-zinc-600 hover:text-zinc-900">Quittance
+                                            </flux:button>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @else
+                                <div class="text-center py-8">
+                                    <flux:icon.inbox class="size-10 text-zinc-300 mx-auto" />
+                                    <p class="text-zinc-500 text-sm mt-2">Aucun historique de paiement récent.</p>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+
+                    <!-- Maintenance Tickets Mini -->
+                    <div
+                        class="bg-white rounded-3xl shadow-lg shadow-zinc-200/50 border border-zinc-100 overflow-hidden shrink-0">
+                        <div class="px-6 py-4 flex items-center justify-between">
+                            <h3 class="font-bold text-zinc-900 flex items-center gap-2 text-sm">
+                                <flux:icon.clipboard-document-check class="size-4 text-orange-500" /> Requêtes
+                                d'intervention
+                            </h3>
+                        </div>
+
+                        <div class="px-6 pb-4">
+                            @if($this->maintenanceRequests->count() > 0)
+                                <div class="flex gap-4 overflow-x-auto pb-2 snap-x">
+                                    @foreach($this->maintenanceRequests as $request)
+                                        <div
+                                            class="min-w-50 bg-zinc-50 border border-zinc-200/75 rounded-2xl p-4 snap-start relative overflow-hidden group hover:border-orange-200 transition-colors">
+                                            <div class="flex justify-between items-start mb-2">
+                                                <flux:badge size="sm" :color="$request->status?->color()"
+                                                    class="scale-90 origin-top-left">{{ $request->status?->label() }}</flux:badge>
+                                                <span
+                                                    class="text-2xs text-zinc-400 font-medium">{{ $request->created_at->diffForHumans(null, true, true) }}</span>
+                                            </div>
+                                            <p class="font-medium text-zinc-900 text-sm truncate pr-2"
+                                                title="{{ $request->title }}">{{ $request->title }}</p>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @else
+                                <div
+                                    class="flex items-center justify-center p-4 bg-zinc-50 rounded-2xl border border-dashed border-zinc-200">
+                                    <p class="text-zinc-500 text-sm flex items-center gap-2">
+                                        <flux:icon.check-circle class="size-4 text-emerald-500" /> Tout fonctionne parfaitement.
                                     </p>
-                                    <p class="text-xs text-zinc-500">{{ $payment->paid_at?->format('d/m/Y') }}</p>
                                 </div>
-                                <flux:button size="xs" icon="arrow-down-tray" variant="ghost">Reçu</flux:button>
-                            </div>
-                        @empty
-                            <p class="text-zinc-500 text-center py-4">Aucun paiement récent.</p>
-                        @endforelse
-                    </div>
-                    <div class="mt-6 pt-4 border-t border-zinc-100 text-center">
-                        <flux:button variant="ghost" class="w-full text-zinc-500" href="{{ route('renter.payments') }}">Voir
-                            tout l'historique</flux:button>
-                    </div>
-                </x-flux::card>
-
-                <!-- Maintenance -->
-                <x-flux::card class="border-0 shadow-lg ring-1 ring-zinc-200/50">
-                    <x-flux::card.header class="flex items-center justify-between">
-                        <div class="flex items-center gap-3">
-                            <div class="p-2 bg-orange-50 rounded-lg text-orange-600">
-                                <flux:icon.wrench-screwdriver class="size-5" />
-                            </div>
-                            <x-flux::card.title>Maintenance</x-flux::card.title>
+                            @endif
                         </div>
-                        <flux:button size="sm" variant="filled" class="bg-zinc-900 text-white hover:bg-zinc-800" icon="plus"
-                            x-on:click="Flux.modal('create-maintenance').show()">
-                            Nouveau
-                        </flux:button>
-                    </x-flux::card.header>
-
-                    <div class="mt-4 space-y-4">
-                        @forelse($this->maintenanceRequests as $request)
-                            <div class="flex items-center justify-between p-3 rounded-lg border border-zinc-100 bg-zinc-50/50">
-                                <div>
-                                    <p class="font-medium text-zinc-900">{{ $request->title }}</p>
-                                    <p class="text-xs text-zinc-500">{{ $request->created_at->diffForHumans() }}</p>
-                                </div>
-                                <flux:badge size="sm" :color="$request->status?->color()">{{ $request->status?->label() }}
-                                </flux:badge>
-                            </div>
-                        @empty
-                            <div class="text-center py-6">
-                                <flux:icon.check-circle class="size-8 text-zinc-300 mx-auto mb-2" />
-                                <p class="text-zinc-500">Aucun signalement en cours. Tout va bien !</p>
-                            </div>
-                        @endforelse
                     </div>
-                </x-flux::card>
+
+                </div>
             </div>
 
         @else
             <!-- Empty State -->
-            <div class="bg-white rounded-2xl shadow-xl border border-zinc-100 p-12 text-center">
-                <div class="size-20 rounded-full bg-zinc-100 flex items-center justify-center mx-auto mb-6">
-                    <flux:icon.home class="size-10 text-zinc-400" />
+            <div class="bg-white rounded-3xl shadow-xl border border-zinc-100 p-16 text-center max-w-2xl mx-auto mt-12">
+                <div class="size-24 rounded-full bg-indigo-50 flex items-center justify-center mx-auto mb-6 relative">
+                    <div class="absolute inset-0 bg-indigo-100 rounded-full animate-ping opacity-20"></div>
+                    <flux:icon.home class="size-12 text-indigo-500 relative z-10" />
                 </div>
-                <h2 class="text-xl font-bold text-zinc-900">Aucun bail actif</h2>
-                <p class="text-zinc-500 mt-2">Votre dossier est vide pour le moment.</p>
+                <h2 class="text-2xl font-bold text-zinc-900 tracking-tight">Aucun bail actif</h2>
+                <p class="text-zinc-500 mt-2 text-lg">Votre dossier locataire est actuellement vide ou en attente
+                    d'affectation par votre gestionnaire.</p>
+
+                <div class="mt-8">
+                    <flux:button variant="filled" class="bg-zinc-900 text-white rounded-xl"
+                        href="mailto:support@agence.com">Contacter l'agence</flux:button>
+                </div>
             </div>
         @endif
     </div>
