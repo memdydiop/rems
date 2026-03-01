@@ -34,9 +34,10 @@ class SendOverdueRelance extends Command
                     ->get();
 
                 foreach ($leases as $lease) {
+                    /** @var \App\Models\Lease $lease */
                     $renter = $lease->renter;
 
-                    if (!$renter || !$renter->email) {
+                    if (!$renter || (empty($renter->email) && empty($renter->phone))) {
                         continue;
                     }
 
@@ -59,7 +60,8 @@ class SendOverdueRelance extends Command
                     if ($daysOverdue >= $days && $daysOverdue < $days + 1) {
                         $renter->notify(new OverduePaymentNotification($lease, $daysOverdue, $level));
                         $totalSent++;
-                        $this->info("[{$level}] Relance envoyée à {$renter->email} ({$daysOverdue}j de retard)");
+                        $contact = $renter->email ?? $renter->phone;
+                        $this->info("[{$level}] Relance envoyée à {$contact} ({$daysOverdue}j de retard)");
                     }
                 }
             } finally {

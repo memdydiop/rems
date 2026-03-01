@@ -7,6 +7,8 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use NotificationChannels\Twilio\TwilioChannel;
+use NotificationChannels\Twilio\TwilioSmsMessage;
 
 class OverduePaymentNotification extends Notification implements ShouldQueue
 {
@@ -21,12 +23,13 @@ class OverduePaymentNotification extends Notification implements ShouldQueue
 
     public function via(object $notifiable): array
     {
-        return ['mail', 'database'];
+        // Envoi par email, sauvegarde en bdd, et via Twilio (WhatsApp/SMS)
+        return ['mail', 'database', TwilioChannel::class];
     }
 
     public function toMail(object $notifiable): MailMessage
     {
-        $amount = number_format($this->lease->rent_amount, 0, ',', ' ');
+        $amount = number_format((float) $this->lease->rent_amount, 0, ',', ' ');
         $unit = $this->lease->unit?->name ?? 'N/A';
         $property = $this->lease->unit?->property?->name ?? 'N/A';
 
@@ -78,5 +81,21 @@ class OverduePaymentNotification extends Notification implements ShouldQueue
                 default => "📋 Rappel : loyer en attente depuis {$this->daysOverdue} jours",
             },
         ];
+    }
+
+    public function toTwilio(object $notifiable)
+    {
+        $amount = number_format((float) $this->lease->rent_amount, 0, ',', ' ');
+
+        $message = match ($this->level) {
+            'urgent' => "⚠️ *MISE EN DEMEURE*\n\nBonjour {$notifiable->first_name},\nVotre loyer de *{$amount} XOF* est impayé depuis {$this->daysOverdue} jours.\nVeuillez régulariser immédiatement pour éviter toute procédure.\n\n- La Direction",
+
+            'warning' => "🔔 *Rappel Important*\n\nBonjour {$notifiable->first_name},\nVotre loyer de *{$amount} XOF* est en retard de {$this->daysOverdue} jours.\nMerci de procéder au règlement dès que possible.\n\n- La Direction",
+
+            default => "📋 *Rappel*\n\nBonjour {$notifiable->first_name},\nSauf erreur de notre part, votre loyer de *{$amount} XOF* (retard: {$this->daysOverdue}j) n'a pas encore été reçu.\nMerci de le régler au plus vite.\n\n- La Direction",
+        };
+
+        return (new TwilioSmsMessage())
+            ->content($message);
     }
 }

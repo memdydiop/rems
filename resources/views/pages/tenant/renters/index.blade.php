@@ -5,12 +5,13 @@ use App\Enums\RenterStatus;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
-use Livewire\WithPagination;
+use App\Models\Lease;
+use App\Enums\LeaseStatus;
+use App\Notifications\OverduePaymentNotification;
 use App\Traits\WithDataTable;
 
 new #[Layout('layouts.app', ['title' => 'Renters'])] class extends Component {
     use WithDataTable;
-    use WithPagination;
 
     #[Computed]
     public function renters()
@@ -24,9 +25,41 @@ new #[Layout('layouts.app', ['title' => 'Renters'])] class extends Component {
     {
         $renter = Renter::find($id);
         if ($renter) {
-            $renter->delete(); // Soft delete if we add SoftDeletes trait, otherwise hard delete
+            $renter->delete();
             $this->js("Flux.toast('Locataire supprimé.')");
         }
+    }
+
+    public function sendManualReminder($id)
+    {
+        $renter = Renter::find($id);
+
+        if (!$renter) {
+            return;
+        }
+
+        // On cherche un bail actif en retard pour ce locataire (simplifié pour manuel)
+        $lease = $renter->leases()->where('status', LeaseStatus::Active)->first();
+
+        if (!$lease) {
+            $this->js("Flux.toast({ variant: 'danger', description: 'Aucun bail actif pour ce locataire.' })");
+            return;
+        }
+
+        // Check if phone or email exists
+        if (empty($renter->email) && empty($renter->phone)) {
+            $this->js("Flux.toast({ variant: 'danger', description: 'Le locataire n\'a ni email ni téléphone.' })");
+            return;
+        }
+
+        // Calculate a generic days overdue value or default to 5 for the message format
+        $dueDate = now()->startOfMonth();
+        $daysOverdue = max(0, now()->diffInDays($dueDate));
+        $level = $daysOverdue >= 15 ? 'warning' : 'reminder';
+
+        $renter->notify(new OverduePaymentNotification($lease, $daysOverdue, $level));
+
+        $this->js("Flux.toast('Relance WhatsApp / Email envoyée avec succès.')");
     }
 
     public function with()
@@ -112,6 +145,10 @@ new #[Layout('layouts.app', ['title' => 'Renters'])] class extends Component {
                                         <flux:menu.item icon="pencil-square"
                                             wire:click="$dispatch('edit-renter', { renter: '{{ $renter->id }}' })">
                                             Modifier</flux:menu.item>
+                                        <flux:menu.item icon="paper-airplane"
+                                            wire:click="sendManualReminder('{{ $renter->id }}')"
+                                            wire:confirm="Envoyer une relance WhatsApp et Email à ce locataire pour son loyer ?">
+                                            Relancer (WhatsApp/Email)</flux:menu.item>
                                         <flux:menu.separator />
                                         <flux:menu.item icon="trash" variant="danger"
                                             wire:click="delete('{{ $renter->id }}')"

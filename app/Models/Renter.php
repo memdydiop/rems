@@ -51,4 +51,24 @@ class Renter extends Model
         // In this app setup: User is in Tenant DB (referenced by `users` table).
         return $this->belongsTo(User::class);
     }
+
+    /**
+     * Route notifications for the Twilio channel.
+     *
+     * @param  \Illuminate\Notifications\Notification  $notification
+     * @return string
+     */
+    public function routeNotificationForTwilio($notification)
+    {
+        if (empty($this->phone)) {
+            return null;
+        }
+
+        // Nettoyage basique du numéro (enlever les espaces, tirets, etc.)
+        $phone = preg_replace('/[^0-9+]/', '', $this->phone);
+
+        // Ajouter le préfixe WhatsApp requis par Twilio
+        // On assume que le numéro en BDD a l'indicatif international
+        return 'whatsapp:' . $phone;
+    }
 }
