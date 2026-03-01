@@ -244,8 +244,13 @@ new
             @endphp
 
             <div class="flex items-center gap-3">
-                <flux:button href="{{ route('tenant.properties.index') }}" icon="home" variant="filled" size="sm">
-                    Propriété</flux:button>
+                <livewire:components.onboarding-flash step="dashboard_add_property" title="🚀 Ajoutez votre Propriété"
+                    description="C'est ici que tout commence ! Ajoutez votre première propriété pour y associer des unités et des locataires."
+                    align="bottom">
+                    <flux:button href="{{ route('tenant.properties.index') }}" icon="home" variant="filled" size="sm">
+                        Propriété
+                    </flux:button>
+                </livewire:components.onboarding-flash>
                 <flux:button href="{{ route('tenant.leases.index') }}" icon="document-plus" variant="filled" size="sm">
                     Bail</flux:button>
                 <flux:button href="{{ route('tenant.maintenance.index') }}" icon="wrench" variant="filled" size="sm">
@@ -551,39 +556,39 @@ new
                 <x-flux::card.body>
                     @if(count($this->expensesByCategory['data']) > 0)
                         <div class="h-72 w-full" x-data="{
-                            init() {
-                                const data = @js($this->expensesByCategory);
-                                const colors = ['#6366f1', '#f43f5e', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16'];
-                                const chart = new ApexCharts(this.$el, {
-                                    series: data.data,
-                                    chart: { type: 'donut', height: 280, fontFamily: 'Instrument Sans, sans-serif' },
-                                    labels: data.labels,
-                                    colors: colors.slice(0, data.labels.length),
-                                    plotOptions: {
-                                        pie: {
-                                            donut: {
-                                                size: '65%',
-                                                labels: {
-                                                    show: true,
-                                                    total: {
+                                init() {
+                                    const data = @js($this->expensesByCategory);
+                                    const colors = ['#6366f1', '#f43f5e', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16'];
+                                    const chart = new ApexCharts(this.$el, {
+                                        series: data.data,
+                                        chart: { type: 'donut', height: 280, fontFamily: 'Instrument Sans, sans-serif' },
+                                        labels: data.labels,
+                                        colors: colors.slice(0, data.labels.length),
+                                        plotOptions: {
+                                            pie: {
+                                                donut: {
+                                                    size: '65%',
+                                                    labels: {
                                                         show: true,
-                                                        label: 'Total',
-                                                        formatter: (w) => new Intl.NumberFormat('fr-FR').format(w.globals.seriesTotals.reduce((a, b) => a + b, 0)) + ' XOF'
+                                                        total: {
+                                                            show: true,
+                                                            label: 'Total',
+                                                            formatter: (w) => new Intl.NumberFormat('fr-FR').format(w.globals.seriesTotals.reduce((a, b) => a + b, 0)) + ' XOF'
+                                                        }
                                                     }
                                                 }
                                             }
+                                        },
+                                        legend: { position: 'bottom', fontSize: '12px', fontWeight: 500 },
+                                        dataLabels: { enabled: false },
+                                        stroke: { width: 2, colors: ['#fff'] },
+                                        tooltip: {
+                                            y: { formatter: (val) => new Intl.NumberFormat('fr-FR').format(val) + ' XOF' }
                                         }
-                                    },
-                                    legend: { position: 'bottom', fontSize: '12px', fontWeight: 500 },
-                                    dataLabels: { enabled: false },
-                                    stroke: { width: 2, colors: ['#fff'] },
-                                    tooltip: {
-                                        y: { formatter: (val) => new Intl.NumberFormat('fr-FR').format(val) + ' XOF' }
-                                    }
-                                });
-                                chart.render();
-                            }
-                        }"></div>
+                                    });
+                                    chart.render();
+                                }
+                            }"></div>
                     @else
                         <div class="flex flex-col items-center justify-center h-40 text-center">
                             <flux:icon name="chart-pie" class="text-zinc-200 w-10 h-10 mb-2" />

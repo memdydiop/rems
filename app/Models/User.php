@@ -32,6 +32,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'name',
         'email',
         'password',
+        'onboarding_steps',
     ];
 
     /**
@@ -56,6 +57,7 @@ class User extends Authenticatable implements MustVerifyEmail
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'onboarding_steps' => 'array',
         ];
     }
 
@@ -111,5 +113,28 @@ class User extends Authenticatable implements MustVerifyEmail
         return $query->whereDoesntHave('roles', function ($query) {
             $query->where('name', 'Ghost');
         });
+    }
+
+    /**
+     * Check if user has seen a specific onboarding step
+     */
+    public function hasSeenOnboarding(string $step): bool
+    {
+        $steps = $this->onboarding_steps ?? [];
+        return in_array($step, $steps);
+    }
+
+    /**
+     * Mark a specific onboarding step as seen
+     */
+    public function markOnboardingAsSeen(string $step): void
+    {
+        $steps = $this->onboarding_steps ?? [];
+
+        if (!in_array($step, $steps)) {
+            $steps[] = $step;
+            $this->onboarding_steps = $steps;
+            $this->save();
+        }
     }
 }
