@@ -198,7 +198,7 @@ new #[Layout('layouts.guest')] class extends Component {
                     <flux:modal.trigger name="request-access">
                         <button wire:click="openGenericModal"
                             class="px-6 py-2.5 rounded-full bg-[rgb(0,185,255)] text-white text-sm font-bold hover:bg-[#009ac9] transition-all duration-300 shadow-[0_0_20px_rgba(0,185,255,0.4)] hover:shadow-[0_0_30px_rgba(0,185,255,0.6)] hover:-translate-y-0.5">
-                            Démarrer gratuitement
+                            Essai gratuit 14 jours
                         </button>
                     </flux:modal.trigger>
                 @endauth
@@ -257,7 +257,7 @@ new #[Layout('layouts.guest')] class extends Component {
                         </flux:modal.trigger>
                         <a href="#features"
                             class="w-full sm:w-auto px-8 py-4 rounded-full bg-blue-600/30 text-white font-medium border border-blue-400/30 hover:bg-blue-600/50 backdrop-blur-sm transition-all text-lg flex items-center justify-center gap-2 group">
-                            Découvrir les visuels
+                            Découvrir les fonctionnalités
                             <flux:icon name="arrow-down"
                                 class="size-5 group-hover:translate-y-1 transition-transform" />
                         </a>
@@ -630,7 +630,7 @@ new #[Layout('layouts.guest')] class extends Component {
                             <flux:modal.trigger name="request-access">
                                 <button wire:click="selectPlan('{{ $plan->name }}')"
                                     class="w-full py-2.5 px-4 bg-[rgb(1,98,232)] text-white font-medium rounded-[5px] hover:bg-blue-600 transition-colors shadow-md shadow-blue-500/20 mt-auto">
-                                    Essai Gratuit
+                                    Démarrer l'essai (14j)
                                 </button>
                             </flux:modal.trigger>
                         </div>
