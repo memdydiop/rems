@@ -15,8 +15,8 @@ new class extends Component {
     #[Validate('required|string|max:255')]
     public $last_name = '';
 
-    #[Validate('required|email|max:255')]
-    public $email = '';
+    #[Validate('nullable|email|max:255')]
+    public $email = null;
 
     #[Validate('required|string|max:50')]
     public $phone = '';
@@ -51,11 +51,10 @@ new class extends Component {
 
     public function save()
     {
-        // Custom validation for uniqueness if needed, handling unique email check manually or via rules with ID ignore
         $rules = [
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:owners,email,' . ($this->owner?->id ?? 'NULL'),
+            'email' => 'nullable|email|max:255|unique:owners,email,' . ($this->owner?->id ?? 'NULL'),
             'phone' => 'required|string|max:50',
             'address' => 'nullable|string',
             'account_details' => 'nullable|string',
@@ -67,7 +66,7 @@ new class extends Component {
             $this->owner->update([
                 'first_name' => $this->first_name,
                 'last_name' => $this->last_name,
-                'email' => $this->email,
+                'email' => $this->email ?: null,
                 'phone' => $this->phone,
                 'address' => $this->address,
                 'account_details' => $this->account_details,
@@ -77,7 +76,7 @@ new class extends Component {
             Owner::create([
                 'first_name' => $this->first_name,
                 'last_name' => $this->last_name,
-                'email' => $this->email,
+                'email' => $this->email ?: null,
                 'phone' => $this->phone,
                 'address' => $this->address,
                 'account_details' => $this->account_details,
@@ -96,7 +95,8 @@ new class extends Component {
     <div class="space-y-6">
         <div>
             <h2 class="text-lg font-bold text-zinc-900">
-                {{ $owner ? 'Modifier le Propriétaire' : 'Nouveau Propriétaire' }}</h2>
+                {{ $owner ? 'Modifier le Propriétaire' : 'Nouveau Propriétaire' }}
+            </h2>
             <p class="text-sm text-zinc-500">Remplissez les informations ci-dessous.</p>
         </div>
 
@@ -106,7 +106,7 @@ new class extends Component {
                 <flux:input wire:model="last_name" label="Nom" placeholder="Dupont" />
             </div>
 
-            <flux:input wire:model="email" label="Email" type="email" icon="envelope" />
+            <flux:input wire:model="email" label="Email (Optionnel)" type="email" icon="envelope" />
             <flux:input wire:model="phone" label="Téléphone" type="tel" icon="phone" />
 
             <flux:textarea wire:model="address" label="Adresse (Optionnel)" rows="2" />

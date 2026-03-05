@@ -20,16 +20,23 @@ class Unit extends Model
     protected $fillable = [
         'property_id',
         'name',
-        'type', // Added type
+        'type',
         'rent_amount',
-        'status',
+        'surface_area',
+        'notes',
     ];
 
     protected $casts = [
-        'status' => UnitStatus::class,
-        'type' => UnitType::class, // Added cast
-        'rent_amount' => 'decimal:2',
+        'type' => UnitType::class,
     ];
+    protected function status(): \Illuminate\Database\Eloquent\Casts\Attribute
+    {
+        return \Illuminate\Database\Eloquent\Casts\Attribute::make(
+            get: fn() => $this->activeLease()->exists()
+            ? UnitStatus::Occupied
+            : UnitStatus::Vacant,
+        );
+    }
 
     public function getActivitylogOptions(): LogOptions
     {
@@ -57,5 +64,30 @@ class Unit extends Model
     public function maintenanceRequests(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(MaintenanceRequest::class);
+    }
+
+    /**
+     * Determine if the unit is currently undergoing active maintenance.
+     */
+    public function isUnderMaintenance(): bool
+    {
+        // Check if there is a building-wide maintenance
+        if ($this->property && $this->property->status === \App\Enums\PropertyStatus::Maintenance) {
+            return true;
+        }
+
+        // Check if there are active maintenance requests for this specific unit
+        return $this->maintenanceRequests()
+            ->whereIn('status', [\App\Enums\MaintenanceStatus::Pending, \App\Enums\MaintenanceStatus::InProgress])
+            ->exists();
+    }
+
+    /**
+     * Determine if the unit is available for a new lease.
+     * Rule: Must be Vacant AND not under active maintenance.
+     */
+    public function canBeLeased(): bool
+    {
+        return $this->status === UnitStatus::Vacant && !$this->isUnderMaintenance();
     }
 }

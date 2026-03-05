@@ -7,38 +7,33 @@ use Livewire\Livewire;
 test('landing page loads', function () {
     $this->get(route('central.home'))
         ->assertStatus(200)
-        ->assertSee('Propella');
+        ->assertSee('PMS');
 });
 
-test('can request access', function () {
-    Livewire::test('pages::central.landing')
+test('can register tenant', function () {
+    Livewire::test('pages::landing')
         ->set('company', 'Big Real Estate')
+        ->set('subdomain', 'bigre')
         ->set('name', 'John Doe')
         ->set('email', 'john@bigre.com')
-        ->call('requestAccess')
-        ->assertHasNoErrors()
-        ->assertSet('sent', true)
-        ->assertSee('Demande envoyée');
-
-    $this->assertDatabaseHas('leads', [
-        'email' => 'john@bigre.com',
-        'company' => 'Big Real Estate',
-        'status' => 'pending',
-    ]);
+        ->set('password', 'password123')
+        ->call('registerTenant')
+        ->assertHasNoErrors();
 });
 
 test('validation works', function () {
-    Livewire::test('pages::central.landing')
+    Livewire::test('pages::landing')
         ->set('email', 'not-an-email')
-        ->call('requestAccess')
+        ->call('registerTenant')
         ->assertHasErrors(['email']);
 });
-test('landing page shows plans', function () {
-    \App\Models\Plan::create(['name' => 'Starter', 'amount' => 0, 'interval' => 'monthly', 'currency' => 'usd', 'stripe_id' => 'p_1', 'paystack_code' => 'pln_1', 'description' => 'Desc']);
-    \App\Models\Plan::create(['name' => 'Croissance', 'amount' => 1000, 'interval' => 'monthly', 'currency' => 'usd', 'stripe_id' => 'p_2', 'paystack_code' => 'pln_2', 'description' => 'Desc']);
 
-    // Developer plan should be hidden (not in the allowed list)
-    \App\Models\Plan::create(['name' => 'Developer', 'amount' => 0, 'interval' => 'monthly', 'currency' => 'usd', 'stripe_id' => 'p_dev', 'paystack_code' => 'pln_dev', 'description' => 'Desc']);
+test('landing page shows plans', function () {
+    \App\Models\Plan::create(['name' => 'Starter', 'amount' => 0, 'interval' => 'monthly', 'currency' => 'usd', 'stripe_id' => 'p_1', 'paystack_code' => 'pln_1', 'description' => 'Desc', 'is_public' => true]);
+    \App\Models\Plan::create(['name' => 'Croissance', 'amount' => 1000, 'interval' => 'monthly', 'currency' => 'usd', 'stripe_id' => 'p_2', 'paystack_code' => 'pln_2', 'description' => 'Desc', 'is_public' => true]);
+
+    // Developer plan should be hidden (is_public = false)
+    \App\Models\Plan::create(['name' => 'Developer', 'amount' => 0, 'interval' => 'monthly', 'currency' => 'usd', 'stripe_id' => 'p_dev', 'paystack_code' => 'pln_dev', 'description' => 'Desc', 'is_public' => false]);
 
     $this->get(route('central.home'))
         ->assertStatus(200)

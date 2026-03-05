@@ -21,18 +21,28 @@ class Lease extends Model
         'renter_id',
         'start_date',
         'end_date',
+        'notice_date',
+        'move_out_date',
         'rent_amount',
+        'charges_amount',
         'deposit_amount',
+        'advance_amount',
         'status',
+        'lease_type',
+        'notes',
         'documents',
     ];
 
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
+        'notice_date' => 'date',
+        'move_out_date' => 'date',
         'documents' => 'array',
         'rent_amount' => 'decimal:2',
+        'charges_amount' => 'decimal:2',
         'deposit_amount' => 'decimal:2',
+        'advance_amount' => 'decimal:2',
         'status' => LeaseStatus::class,
     ];
 

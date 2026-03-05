@@ -35,9 +35,10 @@ class RenterPaymentController extends Controller
         }
 
         // Check if already paid this month
-        $currentMonth = now()->format('Y-m');
+        $currentDate = now();
         $alreadyPaid = $lease->payments()
-            ->whereRaw("to_char(paid_at, 'YYYY-MM') = ?", [$currentMonth])
+            ->whereYear('paid_at', $currentDate->year)
+            ->whereMonth('paid_at', $currentDate->month)
             ->where('status', PaymentStatus::Completed)
             ->exists();
 

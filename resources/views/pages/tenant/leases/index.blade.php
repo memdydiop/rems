@@ -14,6 +14,7 @@ new #[Layout('layouts.app', ['title' => 'Baux'])] class extends Component {
     public $sortAsc = false;
 
     #[On('lease-created')]
+    #[On('lease-updated')]
     public function refresh()
     {
     }
@@ -41,8 +42,31 @@ new #[Layout('layouts.app', ['title' => 'Baux'])] class extends Component {
     public function delete($id)
     {
         $lease = Lease::findOrFail($id);
+
+        // If the lease is active, free up the unit
+        if ($lease->status === 'active') {
+            $lease->unit->update(['status' => \App\Enums\UnitStatus::Vacant]);
+        }
+
         $lease->delete();
         $this->js("Flux.toast('Bail supprimé.')");
+    }
+
+    public function terminate($id)
+    {
+        $lease = Lease::findOrFail($id);
+
+        if ($lease->status === 'active') {
+            $lease->update([
+                'status' => \App\Enums\LeaseStatus::Terminated,
+                'end_date' => now(),
+            ]);
+
+            // Free the unit
+            $lease->unit->update(['status' => \App\Enums\UnitStatus::Vacant]);
+
+            $this->js("Flux.toast('Bail résilié avec succès.')");
+        }
     }
 
     public function with()
@@ -143,20 +167,11 @@ new #[Layout('layouts.app', ['title' => 'Baux'])] class extends Component {
         </div>
 
         <x-flux::card class="overflow-hidden">
-            <x-flux::card.header>
-                <x-flux::card.title>Tous les Baux</x-flux::card.title>
-                <div class="flex gap-2">
-                    <flux:select wire:model.live="perPage" class="w-20" size="sm">
-                        <flux:select.option value="10">10</flux:select.option>
-                        <flux:select.option value="25">25</flux:select.option>
-                        <flux:select.option value="50">50</flux:select.option>
-                    </flux:select>
-                    <flux:input wire:model.live="search" icon="magnifying-glass" size="sm" placeholder="Rechercher..."
-                        class="max-w-xs" />
-                </div>
-            </x-flux::card.header>
+            <x-flux::card.header :title="'Tous les Baux' . ($leases->total() > 0 ? ' (' . $leases->total() . ')' : '')"
+                subtitle="Gérez vos contrats de location et revenus." />
 
-            <x-flux::table :paginate="$leases">
+
+            <x-flux::table :paginate="$leases" search linesPerPage>
                 <x-flux::table.columns>
                     <x-flux::table.column>Locataire</x-flux::table.column>
                     <x-flux::table.column>Unité</x-flux::table.column>
@@ -182,8 +197,10 @@ new #[Layout('layouts.app', ['title' => 'Baux'])] class extends Component {
                                 </div>
                             </x-flux::table.cell>
                             <x-flux::table.cell>
-                                <div class="text-sm text-zinc-900 font-medium">{{ $lease->unit->name }}</div>
-                                <div class="text-xs text-zinc-500">{{ $lease->unit->property->name }}</div>
+                                <a href="{{ route('tenant.units.show', $lease->unit) }}"
+                                    class="text-sm text-zinc-900 font-medium hover:text-indigo-600 transition-colors">{{ $lease->unit->name }}</a>
+                                <a href="{{ route('tenant.properties.show', $lease->unit->property) }}"
+                                    class="text-xs text-zinc-500 hover:text-indigo-500 transition-colors">{{ $lease->unit->property->name }}</a>
                             </x-flux::table.cell>
                             <x-flux::table.cell>
                                 <div class="text-sm text-zinc-600">{{ $lease->start_date->format('d M Y') }} -
@@ -194,19 +211,27 @@ new #[Layout('layouts.app', ['title' => 'Baux'])] class extends Component {
                                 {{ number_format($lease->rent_amount, 0, ',', ' ') . ' FCFA' }}
                             </x-flux::table.cell>
                             <x-flux::table.cell>
-                                <flux:badge size="sm" :color="$lease->status === 'active' ? 'green' : 'zinc'"
-                                    inset="top bottom">
-                                    {{ $lease->status === 'active' ? 'Actif' : 'Terminé' }}
+                                <flux:badge size="sm" :color="$lease->status->color()" inset="top bottom">
+                                    {{ $lease->status->label() }}
                                 </flux:badge>
                             </x-flux::table.cell>
                             <x-flux::table.cell align="right">
                                 <flux:dropdown>
                                     <flux:button variant="ghost" size="xs" icon="ellipsis-horizontal" />
                                     <flux:menu>
-                                        <flux:menu.item icon="pencil-square">Modifier</flux:menu.item>
+                                        <flux:menu.item icon="pencil-square"
+                                            wire:click="$dispatch('open-modal', { name: 'edit-lease', lease_id: '{{ $lease->id }}' })">
+                                            Modifier</flux:menu.item>
                                         <flux:menu.separator />
+                                        @if($lease->status === 'active')
+                                            <flux:menu.item icon="x-circle" wire:click="terminate('{{ $lease->id }}')"
+                                                wire:confirm="Êtes-vous sûr de vouloir résilier ce bail ? Cette action libérera l'unité.">
+                                                Mettre fin au bail</flux:menu.item>
+                                            <flux:menu.separator />
+                                        @endif
                                         <flux:menu.item icon="trash" wire:click="delete('{{ $lease->id }}')"
-                                            wire:confirm="Supprimer ce bail ?" variant="danger">Supprimer</flux:menu.item>
+                                            wire:confirm="Supprimer ce bail d'historique ?" variant="danger">Supprimer
+                                        </flux:menu.item>
                                     </flux:menu>
                                 </flux:dropdown>
                             </x-flux::table.cell>
@@ -230,4 +255,6 @@ new #[Layout('layouts.app', ['title' => 'Baux'])] class extends Component {
     </x-layouts::content>
 
     <livewire:pages::tenant.leases.modals.create />
+    <livewire:pages::tenant.leases.modals.edit />
+    <livewire:pages::tenant.renters.modals.create />
 </div>

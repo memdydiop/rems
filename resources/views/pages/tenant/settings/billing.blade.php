@@ -145,11 +145,10 @@ new #[Layout('layouts.app', ['title' => 'Billing'])] class extends Component {
         @endif
 
         <x-flux::card>
-            <x-flux::card.header>
-                <div class="flex items-center justify-between">
-                    <x-flux::card.title>Forfaits Disponibles</x-flux::card.title>
+            <x-flux::card.header title="Forfaits Disponibles" subtitle="Choisissez le forfait qui convient à vos besoins." icon="tag">
 
-                    <!-- Billing Toggle -->
+            <x-slot:cardActions>
+                <!-- Billing Toggle -->
                     <div class="flex items-center gap-3">
                         <span
                             class="text-sm font-medium {{ $billingCycle === 'monthly' ? 'text-zinc-900' : 'text-zinc-400' }}">Mensuel</span>
@@ -165,10 +164,12 @@ new #[Layout('layouts.app', ['title' => 'Billing'])] class extends Component {
                             Annuel
                         </span>
                     </div>
-                </div>
+            </x-slot:cardActions>
             </x-flux::card.header>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 p-6">
+
+            
                 @forelse($plans as $plan)
                     @php
                         $isCurrent = $currentSubscription && $currentSubscription->plan_id === $plan->id;
@@ -177,7 +178,7 @@ new #[Layout('layouts.app', ['title' => 'Billing'])] class extends Component {
                         $isPremium = ($plan->paystack_code === 'PLN_business' || $plan->paystack_code === 'PLN_business_yearly');
                         $isCurrent = $currentSubscription && $currentSubscription->plan_id === $plan->id;
 
-                        $baseClass = $isPremium ? 'relative bg-white border-2 border-[rgb(1,98,232)] shadow-[0_0_40px_rgba(1,98,232,0.15)] lg:scale-105 z-10' : 'bg-white border border-zinc-200 hover:border-[rgb(1,98,232)]/50 shadow-xl shadow-zinc-200/40 hover:-translate-y-1';
+                        $baseClass = $isPremium ? 'relative bg-white border-2 border-[rgb(1,98,232)] shadow-[0_0_40px_rgba(1,98,232,0.15)]' : 'bg-white border border-zinc-200 hover:border-[rgb(1,98,232)]/50 shadow-xl shadow-zinc-200/40 hover:-translate-y-1';
                         if ($isCurrent && !$isPremium) {
                             $baseClass .= ' ring-2 ring-emerald-500 bg-emerald-50/10';
                         }

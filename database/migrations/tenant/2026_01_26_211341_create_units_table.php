@@ -15,7 +15,7 @@ return new class extends Migration {
             $table->uuid('id')->primary();
             $table->foreignUuid('property_id')->constrained()->cascadeOnDelete();
             $table->string('name');
-            $table->string('type')->default(UnitType::Apartment->value);
+            $table->string('type')->default(UnitType::F3->value);
             $table->decimal('rent_amount', 10, 2)->default(0);
             $table->string('status')->default('vacant');
             $table->softDeletes();

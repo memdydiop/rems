@@ -14,10 +14,10 @@ new class extends Component {
     #[Validate('required|string|max:255')]
     public $last_name = '';
 
-    #[Validate('required|email|max:255')] // Unique check needs ignore current id, tricky in strict attributes without rules() method
+    #[Validate('nullable|email|max:255')] // Unique check in rules()
     public $email = '';
 
-    #[Validate('nullable|string|max:20')]
+    #[Validate('required|string|max:20')]
     public $phone = '';
 
     #[Validate('required|in:active,lead,past')]
@@ -28,7 +28,7 @@ new class extends Component {
     public function rules()
     {
         return [
-            'email' => 'required|email|max:255|unique:renters,email,' . $this->renter->id,
+            'email' => 'nullable|email|max:255|unique:renters,email,' . $this->renter->id,
         ];
     }
 
@@ -78,7 +78,7 @@ new class extends Component {
                 <flux:input wire:model="last_name" label="Nom" />
             </div>
 
-            <flux:input wire:model="email" label="Email" type="email" />
+            <flux:input wire:model="email" label="Email (Optionnel)" type="email" />
             <flux:input wire:model="phone" label="Téléphone" />
 
             <flux:select wire:model="status" label="Statut">

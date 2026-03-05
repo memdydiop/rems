@@ -42,9 +42,10 @@ class SendOverdueRelance extends Command
                     }
 
                     // Check if rent is unpaid for current month
-                    $currentMonth = now()->format('Y-m');
+                    $currentDate = now();
                     $hasPaidThisMonth = $lease->payments()
-                        ->whereRaw("to_char(paid_at, 'YYYY-MM') = ?", [$currentMonth])
+                        ->whereYear('paid_at', $currentDate->year)
+                        ->whereMonth('paid_at', $currentDate->month)
                         ->where('status', 'completed')
                         ->exists();
 

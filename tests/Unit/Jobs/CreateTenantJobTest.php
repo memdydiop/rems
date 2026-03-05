@@ -51,6 +51,11 @@ class CreateTenantJobTest extends TestCase
                     return str_contains($notification->loginUrl, 'acme.localhost/login');
                 }
             );
+
+            Notification::assertSentTo(
+                [$user],
+                \Illuminate\Auth\Notifications\VerifyEmail::class
+            );
         });
     }
 }

@@ -12,13 +12,18 @@ new class extends Component {
     #[Validate('required|string|max:255')]
     public $name = '';
 
-    #[Validate('required|numeric|min:0')]
-    public $rent_amount = '';
-
     #[Validate('required|string')]
     public $type = '';
 
-    public $status = '';
+
+    #[Validate('nullable|numeric|min:0')]
+    public $rent_amount = null;
+
+    #[Validate('nullable|numeric|min:0')]
+    public $surface_area = null;
+
+    #[Validate('nullable|string')]
+    public $notes = '';
 
     public function mount()
     {
@@ -30,9 +35,10 @@ new class extends Component {
     {
         $this->unit = Unit::findOrFail($id);
         $this->name = $this->unit->name;
-        $this->rent_amount = $this->unit->rent_amount;
         $this->type = $this->unit->type->value;
-        $this->status = $this->unit->status->value;
+        $this->rent_amount = $this->unit->rent_amount;
+        $this->surface_area = $this->unit->surface_area;
+        $this->notes = $this->unit->notes;
 
         Flux::modal('edit-unit')->show();
     }
@@ -44,17 +50,14 @@ new class extends Component {
         $this->unit->update([
             'name' => $this->name,
             'type' => $this->type,
-            'rent_amount' => $this->rent_amount,
-            'status' => $this->status,
+            'rent_amount' => $this->rent_amount ?: null,
+            'surface_area' => $this->surface_area ?: null,
+            'notes' => $this->notes ?: null,
         ]);
 
         Flux::toast('Unité mise à jour avec succès.');
         Flux::modal('edit-unit')->close();
-
-        $this->dispatch('unit-updated'); // Optional: to refresh parent if needed, though Livewire might handle it via model binding
-
-        // Refresh the page or redirect to show updated data if needed
-        return redirect()->route('tenant.units.show', $this->unit);
+        $this->dispatch('unit-updated');
     }
 };
 ?>
@@ -73,7 +76,7 @@ new class extends Component {
 
             <optgroup label="Résidentiel">
                 @foreach (\App\Enums\UnitType::cases() as $type)
-                    @if(in_array($type->value, ['apartment', 'studio', 'room', 'entire_house']))
+                    @if(in_array($type->value, ['studio', 'f1', 'f2', 'f3', 'f4', 'f5_plus', 'room', 'entire_house']))
                         <flux:select.option value="{{ $type->value }}">{{ $type->label() }}</flux:select.option>
                     @endif
                 @endforeach
@@ -96,13 +99,16 @@ new class extends Component {
             </optgroup>
         </flux:select>
 
-        <flux:input wire:model="rent_amount" label="Montant du loyer (XOF)" type="number" step="0.01" />
 
-        <flux:select wire:model="status" label="Statut">
-            @foreach (UnitStatus::cases() as $unitStatus)
-                <flux:select.option value="{{ $unitStatus->value }}">{{ $unitStatus->label() }}</flux:select.option>
-            @endforeach
-        </flux:select>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <flux:input wire:model="surface_area" type="number" step="0.01" label="Surface (m²) (Optionnel)" />
+            <flux:input wire:model="rent_amount" type="number" step="0.01" label="Loyer attendu (Optionnel)"
+                prefix="{{ config('app.currency', 'FCFA') }}" />
+        </div>
+
+        <flux:textarea wire:model="notes" label="Notes (Optionnel)" rows="2"
+            placeholder="Informations complémentaires..." />
 
         <div class="flex justify-end gap-2">
             <flux:modal.close>

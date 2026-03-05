@@ -49,14 +49,11 @@ new #[Layout('layouts.app', ['title' => 'Propriétés'])] class extends Componen
             ->when($this->status !== 'all', fn($q) => $q->where('status', $this->status))
             ->orderBy($this->sortCol, $this->sortAsc ? 'asc' : 'desc');
 
-        // Optimized: Single query for Unit stats
-        $unitStats = Unit::toBase()
-            ->selectRaw('count(*) as total')
-            ->selectRaw("count(case when status = 'occupied' then 1 end) as occupied")
-            ->first();
-
-        $totalUnits = $unitStats->total ?? 0;
-        $occupiedUnits = $unitStats->occupied ?? 0;
+        // Optimized: Unit stats using Eloquent
+        $totalUnits = Unit::count();
+        $occupiedUnits = Unit::whereHas('leases', function ($q) {
+            $q->where('status', 'active');
+        })->count();
         $occupancyRate = $totalUnits > 0 ? round(($occupiedUnits / $totalUnits) * 100) : 0;
 
         return [
@@ -254,6 +251,7 @@ new #[Layout('layouts.app', ['title' => 'Propriétés'])] class extends Componen
                     @endforelse
                 </x-flux::table.rows>
             </x-flux::table>
+
         </x-flux::card>
 
     </x-layouts::content>

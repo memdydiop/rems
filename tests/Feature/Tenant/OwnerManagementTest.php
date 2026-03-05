@@ -12,6 +12,7 @@ class OwnerManagementTest extends TenantTestCase
 {
     public function test_owners_page_is_accessible()
     {
+        $this->withoutMiddleware([\App\Http\Middleware\EnsureSubscriptionActive::class, \App\Http\Middleware\CheckOnboardingStatus::class]);
         $user = User::factory()->create();
         $this->actingAs($user);
 
@@ -65,7 +66,7 @@ class OwnerManagementTest extends TenantTestCase
 
         Livewire::test('pages::tenant.properties.modals.create')
             ->set('name', 'New Property')
-            ->set('type', 'residential')
+            ->set('type', 'residential_building')
             ->set('owner_id', $owner->id)
             ->call('save');
 

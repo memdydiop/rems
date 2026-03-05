@@ -82,6 +82,9 @@ class CreateTenantJob implements ShouldQueue
                 $tenantUrl = $scheme . $fullDomain . $port . '/login';
 
                 $user->notify(new \App\Notifications\WelcomeTenantNotification($tenantUrl));
+
+                // Trigger email verification
+                $user->sendEmailVerificationNotification();
             });
 
         });

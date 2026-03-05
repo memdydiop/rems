@@ -20,11 +20,17 @@ class MaintenanceRequest extends Model
     protected $fillable = [
         'title',
         'description',
+        'internal_notes',
         'status',
+        'category',
         'priority',
         'property_id',
         'unit_id',
+        'renter_id',
         'user_id',
+        'photo_path',
+        'reported_by',
+        'reporter_phone',
     ];
 
     public function getActivitylogOptions(): LogOptions
@@ -37,6 +43,7 @@ class MaintenanceRequest extends Model
 
     protected $casts = [
         'status' => MaintenanceStatus::class,
+        'category' => \App\Enums\MaintenanceCategory::class,
         'priority' => MaintenancePriority::class,
     ];
 
@@ -53,6 +60,11 @@ class MaintenanceRequest extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function renter(): BelongsTo
+    {
+        return $this->belongsTo(Renter::class);
     }
 
     public function isEditable(): bool

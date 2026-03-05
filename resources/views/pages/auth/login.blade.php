@@ -5,36 +5,27 @@
         <!-- Session Status -->
         <x-auth-session-status class="text-center" :status="session('status')" />
 
-        <form method="POST" action="{{ request()->routeIs('central.*') ? route('central.login') : route('login') }}" class="flex flex-col gap-6">
+        <form method="POST" action="{{ request()->routeIs('central.*') ? route('central.login') : route('login') }}"
+            class="flex flex-col gap-6">
             @csrf
 
             <!-- Email Address -->
-            <flux:input
-                name="email"
-                :label="__('Email address')"
-                :value="old('email')"
-                type="email"
-                required
-                autofocus
-                autocomplete="email"
-                placeholder="email@example.com"
-            />
+            <flux:input name="email" :label="__('Email address')" :value="old('email')" type="email" required autofocus
+                autocomplete="email" placeholder="email@example.com" />
 
             <!-- Password -->
             <div class="relative">
-                <flux:input
-                    name="password"
-                    :label="__('Password')"
-                    type="password"
-                    required
-                    autocomplete="current-password"
-                    :placeholder="__('Password')"
-                    viewable
-                />
+                <flux:input name="password" :label="__('Password')" type="password" required
+                    autocomplete="current-password" :placeholder="__('Password')" viewable />
 
-                @if (Route::has('password.request'))
-                    <flux:link class="absolute top-0 text-sm end-0" :href="route('password.request')" wire:navigate>
-                        {{ __('Forgot your password?') }}
+                @php
+                    $routePrefix = request()->routeIs('central.*') ? 'central.' : '';
+                    $resetRouteName = $routePrefix . 'password.request';
+                @endphp
+                @if (Laravel\Fortify\Features::enabled(Laravel\Fortify\Features::resetPasswords()) && Route::has($resetRouteName))
+                    <flux:link class="absolute top-0 text-xs end-0 text-indigo-600! hover:underline"
+                        :href="route($resetRouteName)" wire:navigate>
+                        {{ __('Mot de passe oublié ?') }}
                     </flux:link>
                 @endif
             </div>
@@ -52,7 +43,8 @@
         @if (Route::has('register'))
             <div class="space-x-1 text-sm text-center rtl:space-x-reverse text-zinc-600 ">
                 <span>{{ __('Don\'t have an account?') }}</span>
-                <flux:link :href="request()->routeIs('central.*') ? route('central.register') : route('register')" wire:navigate>{{ __('Sign up') }}</flux:link>
+                <flux:link :href="request()->routeIs('central.*') ? route('central.register') : route('register')"
+                    wire:navigate>{{ __('Sign up') }}</flux:link>
             </div>
         @endif
     </div>

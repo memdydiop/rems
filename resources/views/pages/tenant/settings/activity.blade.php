@@ -3,13 +3,12 @@
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
-use Spatie\Activitylog\Models\Activity;
 use App\Models\User;
 use App\Traits\WithDataTable;
+use Spatie\Activitylog\Models\Activity;
 
 new #[Layout('layouts.app', ['title' => 'Activity Log'])] class extends Component {
-    use WithPagination;
-    use WithDataTable;
+    use WithPagination, WithDataTable;
 
     public function mount()
     {
@@ -109,8 +108,32 @@ new #[Layout('layouts.app', ['title' => 'Activity Log'])] class extends Componen
                                 <flux:badge size="sm" :color="$aColor" inset="top bottom">{{ $desc }}</flux:badge>
                             </x-flux::table.cell>
                             <x-flux::table.cell>
-                                <span class="font-medium text-zinc-900">{{ class_basename($activity->subject_type) }}</span>
-                                <span class="text-zinc-500 text-xs ml-1">#{{ $activity->subject_id }}</span>
+                                @php
+                                    $subjectType = class_basename($activity->subject_type);
+                                    $subjectName = match ($subjectType) {
+                                        'Property' => 'Propriété',
+                                        'Unit' => 'Unité',
+                                        'Lease' => 'Bail',
+                                        'Renter' => 'Locataire',
+                                        'RentPayment' => 'Paiement',
+                                        'MaintenanceRequest' => 'Ticket',
+                                        'Expense' => 'Dépense',
+                                        'User' => 'Utilisateur',
+                                        default => 'Élément'
+                                    };
+
+                                    if ($activity->subject) {
+                                        $identifier = $activity->subject->name
+                                            ?? $activity->subject->title
+                                            ?? $activity->subject->reference
+                                            ?? $activity->subject->first_name
+                                            ?? ('#' . $activity->subject->id);
+                                    } else {
+                                        $identifier = '#' . $activity->subject_id;
+                                    }
+                                @endphp
+                                <span class="font-medium text-zinc-900">{{ $subjectName }}</span>
+                                <span class="text-zinc-500 text-xs ml-1">{{ $identifier }}</span>
                             </x-flux::table.cell>
                             <x-flux::table.cell>
                                 @if($activity->causer)

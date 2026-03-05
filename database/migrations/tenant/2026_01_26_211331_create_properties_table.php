@@ -16,7 +16,7 @@ return new class extends Migration {
             $table->uuid('id')->primary();
             $table->string('name');
             $table->text('address')->nullable();
-            $table->string('type')->default(PropertyType::Apartment->value);
+            $table->string('type')->default(PropertyType::ResidentialBuilding->value);
             $table->string('status')->default(PropertyStatus::Active->value);
             $table->uuid('owner_id')->nullable();
             $table->softDeletes();

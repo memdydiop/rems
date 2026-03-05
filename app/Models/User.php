@@ -33,6 +33,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'email',
         'password',
         'onboarding_steps',
+        'has_completed_onboarding',
     ];
 
     /**
@@ -58,6 +59,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'onboarding_steps' => 'array',
+            'has_completed_onboarding' => 'boolean',
         ];
     }
 
@@ -103,6 +105,16 @@ class User extends Authenticatable implements MustVerifyEmail
         }
 
         $this->notify(new \App\Notifications\TenantResetPassword($url));
+    }
+
+    /**
+     * Send the email verification notification.
+     *
+     * @return void
+     */
+    public function sendEmailVerificationNotification()
+    {
+        $this->notify(new \App\Notifications\TenantVerifyEmail);
     }
 
     /**

@@ -33,10 +33,10 @@ class CheckOnboardingStatus
 
         // Check if user is authenticated and tenant context is active
         if (auth()->check() && tenant()) {
-            // Check if any properties exist for this tenant
-            $hasProperties = Property::exists();
+            $user = auth()->user();
 
-            if (!$hasProperties) {
+            // Redirect to onboarding if they haven't completed it and have no properties
+            if (!$user->has_completed_onboarding && !Property::exists()) {
                 return redirect()->route('tenant.onboarding');
             }
         }

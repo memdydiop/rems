@@ -4,59 +4,54 @@ namespace App\Enums;
 
 enum PropertyType: string
 {
-
-    // Résidentiel Detailed
-    case House = 'house';
-    case Apartment = 'apartment';
-    case Studio = 'studio';
-    case DuplexTriplex = 'duplex_triplex';
-    case MultiFamily = 'multi_family';
+    // Résidentiel
+    case ResidentialBuilding = 'residential_building';
     case Villa = 'villa';
+    case House = 'house';
+    case Compound = 'compound';
 
     // Commercial
-    case Office = 'office';
-    case Retail = 'retail';
-    case Restaurant = 'restaurant';
+    case CommercialBuilding = 'commercial_building';
+    case ShoppingCenter = 'shopping_center';
     case Hotel = 'hotel';
+
+    // Mixte
+    case MixedUse = 'mixed_use';
 
     // Industriel
     case Warehouse = 'warehouse';
     case Factory = 'factory';
-    case IndustrialSpace = 'industrial_space';
+    case IndustrialComplex = 'industrial_complex';
 
-    // Spécial
+    // Terrain
     case Land = 'land';
-    case Parking = 'parking';
 
     public function label(): string
     {
         return match ($this) {
-            self::House => 'Maison',
-            self::Apartment => 'Appartement',
-            self::Studio => 'Studio',
-            self::DuplexTriplex => 'Duplex/Triplex',
-            self::MultiFamily => 'Immeuble',
+            self::ResidentialBuilding => 'Immeuble résidentiel',
             self::Villa => 'Villa',
-            self::Office => 'Bureau',
-            self::Retail => 'Commerce',
-            self::Restaurant => 'Restaurant',
+            self::House => 'Maison',
+            self::Compound => 'Concession',
+            self::CommercialBuilding => 'Immeuble commercial',
+            self::ShoppingCenter => 'Centre commercial',
             self::Hotel => 'Hôtel',
+            self::MixedUse => 'Immeuble mixte',
             self::Warehouse => 'Entrepôt',
             self::Factory => 'Usine',
-            self::IndustrialSpace => 'Local d\'activité',
+            self::IndustrialComplex => 'Complexe industriel',
             self::Land => 'Terrain',
-            self::Parking => 'Parking',
         };
     }
+
     public function color(): string
     {
         return match ($this) {
-            self::House, self::Apartment, self::Studio, self::DuplexTriplex, self::Villa => 'blue',
-            self::MultiFamily => 'indigo',
-            self::Office, self::Retail, self::Restaurant, self::Hotel => 'orange',
-            self::Warehouse, self::Factory, self::IndustrialSpace => 'zinc',
+            self::ResidentialBuilding, self::Villa, self::House, self::Compound => 'blue',
+            self::CommercialBuilding, self::ShoppingCenter, self::Hotel => 'orange',
+            self::MixedUse => 'violet',
+            self::Warehouse, self::Factory, self::IndustrialComplex => 'zinc',
             self::Land => 'green',
-            self::Parking => 'gray',
         };
     }
 }

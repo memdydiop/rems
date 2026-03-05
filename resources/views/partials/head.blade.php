@@ -11,3 +11,9 @@
 <link href="https://fonts.bunny.net/css?family=poppins:300,400,500,600" rel="stylesheet" />
 
 @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+<style>
+    [x-cloak] {
+        display: none !important;
+    }
+</style>

@@ -78,7 +78,8 @@ Route::middleware([
             Route::livewire('/renters', 'pages::tenant.renters.index')->name('tenant.renters.index');
             Route::livewire('/projects', 'pages::tenant.projects.index')->name('tenant.projects.index');
             Route::livewire('/projects/{project}', 'pages::tenant.projects.show')->name('tenant.projects.show');
-            Route::livewire('/maintenance', 'pages::tenant.maintenance.index')->name('tenant.maintenance.index');
+            Route::livewire('/maintenance/units', 'pages::tenant.maintenance.units.index')->name('tenant.maintenance.units.index');
+            Route::livewire('/maintenance/properties', 'pages::tenant.maintenance.properties.index')->name('tenant.maintenance.properties.index');
             Route::livewire('/settings/activity', 'pages::tenant.settings.activity')->name('tenant.settings.activity');
             Route::livewire('/expenses', 'pages::tenant.expenses.index')->name('tenant.expenses.index');
             Route::livewire('/settings/billing', 'pages::tenant.settings.billing')->name('tenant.settings.billing');
@@ -87,13 +88,15 @@ Route::middleware([
             Route::livewire('/settings/emails', 'pages::tenant.settings.emails')->name('tenant.settings.emails');
             Route::livewire('/onboarding', 'pages::tenant.onboarding')->name('tenant.onboarding');
 
-            // Roles
-            Route::prefix('settings/roles')->name('tenant.settings.roles.')->group(function () {
-                Route::livewire('/', 'pages::tenant.settings.roles.index')->name('index');
+            // Settings & Restrictions requiring Verification
+            Route::middleware('verified')->group(function () {
+                // Roles
+                Route::prefix('settings/roles')->name('tenant.settings.roles.')->group(function () {
+                    Route::livewire('/', 'pages::tenant.settings.roles.index')->name('index');
+                });
             });
 
             Route::livewire('/leases', 'pages::tenant.leases.index')->name('tenant.leases.index');
-            Route::livewire('/leases/create', 'pages::tenant.leases.create')->name('tenant.leases.create');
 
             // Reports
             Route::prefix('reports')->name('tenant.reports.')->group(function () {
@@ -113,6 +116,7 @@ Route::middleware([
 
             // Owners
             Route::livewire('/owners', 'pages::tenant.owners.index')->name('tenant.owners.index');
+            Route::livewire('/owners/{owner}', 'pages::tenant.owners.show')->name('tenant.owners.show');
         });
 
         // Billing Callback - Must be accessible without active subscription

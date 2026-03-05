@@ -103,20 +103,9 @@ new #[Layout('layouts.app', ['title' => 'Projets'])] class extends Component {
         </div>
 
         <x-flux::card>
-            <x-flux::card.header>
-                <x-flux::card.title>Tous les Projets</x-flux::card.title>
-                <div class="flex gap-2">
-                    <flux:select wire:model.live="perPage" class="w-20" size="sm">
-                        <flux:select.option value="10">10</flux:select.option>
-                        <flux:select.option value="25">25</flux:select.option>
-                        <flux:select.option value="50">50</flux:select.option>
-                    </flux:select>
-                    <flux:input wire:model.live="search" icon="magnifying-glass" size="sm"
-                        placeholder="Rechercher des projets..." class="max-w-xs" />
-                </div>
-            </x-flux::card.header>
+            <x-flux::card.header :title="'Tous les Projets' . ($projects->total() > 0 ? ' (' . $projects->total() . ')' : '')" subtitle="Gérez vos projets à long terme et vos rénovations majeures." />
 
-            <x-flux::table :paginate="$projects">
+            <x-flux::table :paginate="$projects" search linesPerPage>
                 <x-flux::table.columns>
                     <x-flux::table.column sortable :sorted="$sortCol === 'name'" :direction="$sortAsc ? 'asc' : 'desc'"
                         wire:click="sortBy('name')">Projet</x-flux::table.column>

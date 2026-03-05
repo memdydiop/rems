@@ -95,9 +95,10 @@ new #[Layout('layouts.app', ['title' => 'Propriétaires'])] class extends Compon
                                     <flux:avatar class="size-10"
                                         :initials="substr($owner->first_name, 0, 1) . substr($owner->last_name, 0, 1)" />
                                     <div>
-                                        <div class="font-medium text-zinc-900">{{ $owner->first_name }}
-                                            {{ $owner->last_name }}
-                                        </div>
+                                        <a href="{{ route('tenant.owners.show', $owner) }}"
+                                            class="font-medium text-zinc-900 hover:text-indigo-600 transition-colors">
+                                            {{ $owner->first_name }} {{ $owner->last_name }}
+                                        </a>
                                     </div>
                                 </div>
                             </x-flux::table.cell>
@@ -121,6 +122,8 @@ new #[Layout('layouts.app', ['title' => 'Propriétaires'])] class extends Compon
                                 <flux:dropdown>
                                     <flux:button variant="ghost" size="xs" icon="ellipsis-horizontal" />
                                     <flux:menu>
+                                        <flux:menu.item icon="eye" href="{{ route('tenant.owners.show', $owner) }}">
+                                            Voir le profil</flux:menu.item>
                                         <flux:menu.item icon="pencil-square"
                                             wire:click="$dispatch('open-modal', { name: 'edit-owner', owner: '{{ $owner->id }}' })">
                                             Modifier</flux:menu.item>

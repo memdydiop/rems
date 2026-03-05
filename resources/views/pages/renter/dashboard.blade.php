@@ -59,9 +59,10 @@ new
             return false;
         }
 
-        $currentMonth = now()->format('Y-m');
+        $currentDate = now();
         return $this->activeLease->payments()
-            ->whereRaw("to_char(paid_at, 'YYYY-MM') = ?", [$currentMonth])
+            ->whereYear('paid_at', $currentDate->year)
+            ->whereMonth('paid_at', $currentDate->month)
             ->where('status', 'completed')
             ->exists();
     }
@@ -152,7 +153,7 @@ new
 
                 <!-- Quick Action: Maintenance -->
                 <div class="bg-linear-to-br from-indigo-500 to-indigo-600 rounded-3xl shadow-xl shadow-indigo-500/20 p-8 flex flex-col justify-between text-white relative overflow-hidden group cursor-pointer ring-1 ring-white/20 transition-transform hover:-translate-y-1"
-                    x-on:click="Flux.modal('create-maintenance').show()">
+                    x-on:click="Flux.modal('renter-create-maintenance').show()">
                     <div
                         class="absolute top-0 right-0 -mr-8 -mt-8 opacity-20 transform group-hover:scale-110 transition-transform duration-500">
                         <flux:icon.wrench-screwdriver class="size-48" />
@@ -203,13 +204,24 @@ new
                         </div>
 
                         <div class="mt-8 pt-6 border-t border-zinc-100">
-                            <p class="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-3">Documents du bail
-                            </p>
-                            <flux:button variant="ghost" size="sm"
-                                class="w-full text-zinc-600 bg-zinc-50 border border-zinc-200 rounded-xl"
-                                icon="document-arrow-down">
-                                Télécharger le contrat
-                            </flux:button>
+                            <div
+                                class="bg-red-50 rounded-2xl p-4 border border-red-100 group/urgent overflow-hidden relative">
+                                <div
+                                    class="absolute -right-4 -bottom-4 opacity-10 transform group-hover/urgent:scale-110 transition-transform">
+                                    <flux:icon.phone class="size-24 text-red-600" />
+                                </div>
+                                <h4 class="text-red-700 font-bold text-sm flex items-center gap-2 mb-2">
+                                    <flux:icon.exclamation-triangle class="size-4 animate-pulse" />
+                                    Urgence 24h/24
+                                </h4>
+                                <p class="text-red-600/80 text-xs mb-3 leading-relaxed">Pour toute urgence vitale ou
+                                    sinistre grave (fuite massive, incendie).</p>
+                                <a href="tel:+22500000000"
+                                    class="flex items-center justify-between bg-white px-4 py-2 rounded-xl shadow-sm border border-red-200 text-red-700 font-bold hover:bg-red-50 transition-colors relative z-10">
+                                    <span>Appeler l'astreinte</span>
+                                    <flux:icon.phone class="size-4" />
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>

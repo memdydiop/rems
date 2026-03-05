@@ -19,7 +19,7 @@ $primaryDomain = $centralDomains[0] ?? config('app.url');
 Route::domain($primaryDomain)->name('central.')->group(function () {
 
     // -- Public Routes --
-    Route::livewire('/', 'pages::central.landing')->name('home');
+    Route::livewire('/', 'pages::landing')->name('home');
 
     Route::get('/impersonate/leave', function () {
         session()->forget('impersonating_from_central');

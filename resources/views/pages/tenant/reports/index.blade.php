@@ -77,7 +77,7 @@ new
         <!-- Quick Stats Summary -->
         <div class="mt-8">
             <x-flux::card>
-                <x-flux::card.header title="Résumé Rapide" />
+                <x-flux::card.header title="Résumé Rapide" subtitle="Statistiques clés de votre portefeuille immobilier." />
                 <div class="p-6 grid grid-cols-2 md:grid-cols-4 gap-6">
                     <div class="text-center">
                         <p class="text-3xl font-bold text-zinc-900">

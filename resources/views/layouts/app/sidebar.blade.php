@@ -78,10 +78,16 @@
                         :current="request()->routeIs('tenant.units.*')" wire:navigate>
                         {{ __('Unités') }}
                     </flux:sidebar.item>
-                    <flux:sidebar.item icon="wrench-screwdriver" :href="route('tenant.maintenance.index')"
-                        :current="request()->routeIs('tenant.maintenance.*')" wire:navigate>
-                        {{ __('Maintenance') }}
-                    </flux:sidebar.item>
+                    <flux:sidebar.group :heading="__('Maintenance')" class="grid mt-2 mb-2">
+                        <flux:sidebar.item icon="home" :href="route('tenant.maintenance.units.index')"
+                            :current="request()->routeIs('tenant.maintenance.units.*')" wire:navigate>
+                            {{ __('Privatif (Unités)') }}
+                        </flux:sidebar.item>
+                        <flux:sidebar.item icon="building-office-2" :href="route('tenant.maintenance.properties.index')"
+                            :current="request()->routeIs('tenant.maintenance.properties.*')" wire:navigate>
+                            {{ __('Communs (Propriétés)') }}
+                        </flux:sidebar.item>
+                    </flux:sidebar.group>
                     <flux:sidebar.item icon="briefcase" :href="route('tenant.projects.index')"
                         :current="request()->routeIs('tenant.projects.*')" wire:navigate>
                         {{ __('Travaux') }}
@@ -210,6 +216,31 @@
     </flux:header>
 
     <flux:main class="p-6">
+        @if(auth()->check() && !auth()->user()->hasVerifiedEmail() && !request()->routeIs('verification.notice'))
+            <div class="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-4 shadow-sm">
+                <div class="p-2 bg-amber-100 rounded-lg text-amber-600 shrink-0 mt-0.5">
+                    <flux:icon name="exclamation-triangle" class="size-5" />
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-sm font-semibold text-amber-800">Vérifiez votre adresse email</h3>
+                    <p class="text-sm text-amber-700 mt-1">
+                        Pour des raisons de sécurité et pour accéder à toutes les fonctionnalités (création de biens, envois
+                        de quittances, etc.), veuillez cliquer sur le lien envoyé à
+                        <strong>{{ auth()->user()->email }}</strong>.
+                    </p>
+                    <div class="mt-3 flex items-center gap-3">
+                        <form method="POST" action="{{ route('verification.send') }}">
+                            @csrf
+                            <button type="submit"
+                                class="text-sm font-medium text-amber-800 hover:text-amber-900 underline underline-offset-2">
+                                Renvoyer l'email
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         {{ $slot }}
     </flux:main>
 

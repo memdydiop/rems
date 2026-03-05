@@ -14,13 +14,13 @@ class PropertyTest extends TenantTestCase
     {
         $property = Property::factory()->create([
             'name' => 'Sunset Villa',
-            'type' => PropertyType::Residential,
+            'type' => PropertyType::ResidentialBuilding,
             'status' => PropertyStatus::Active,
         ]);
 
         $this->assertDatabaseHas('properties', [
             'name' => 'Sunset Villa',
-            'type' => PropertyType::Residential->value,
+            'type' => PropertyType::ResidentialBuilding->value,
         ]);
     }
 

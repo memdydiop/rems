@@ -8,16 +8,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
 
-class ProjectTest extends TestCase
+class ProjectTest extends \Tests\TenantTestCase
 {
-    use RefreshDatabase;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-        $this->artisan('migrate', ['--path' => 'database/migrations/tenant']);
-    }
-
     public function test_tenant_user_can_view_projects_index(): void
     {
         // Mock tenancy environment - actually we can't easily mock full tenancy url routing in feature tests
@@ -27,9 +19,9 @@ class ProjectTest extends TestCase
         $user = User::factory()->create();
 
         Livewire::actingAs($user)
-            ->test(\App\Livewire\Pages\Tenant\Projects\Index::class)
+            ->test('pages::tenant.projects.index')
             ->assertStatus(200)
-            ->assertSee('Projects');
+            ->assertSee('Projets');
     }
 
     public function test_tenant_user_can_create_project(): void

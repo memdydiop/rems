@@ -1,20 +1,16 @@
 <?php
 
-use Livewire\Attributes\Layout;
-use Livewire\Attributes\Computed;
-use Livewire\Component;
+use Livewire\Attributes\{Layout, Computed};
+use Livewire\{Component, WithPagination};
+use App\Enums\{PropertyStatus, PaymentStatus, LeaseStatus};
+use App\Models\{Expense, RentPayment, Unit, Lease, Property, MaintenanceRequest};
 use App\Traits\WithDataTable;
-use Livewire\WithPagination;
-use App\Enums\PropertyStatus;
-use App\Models\Lease;
-use App\Models\Unit;
-use App\Models\RentPayment;
-use App\Enums\PaymentStatus;
-use App\Models\Expense;
+use Carbon\Carbon;
 
 new
     #[Layout('layouts.app', ['title' => 'Tenant'])]
     class extends Component {
+
     use WithPagination, WithDataTable;
 
     public $status = 'all';
@@ -31,8 +27,11 @@ new
     #[Computed]
     public function stats()
     {
+        $totalProperties = Property::count();
         $totalUnits = Unit::count();
-        $occupiedUnits = Unit::where('status', 'occupied')->count();
+        $occupiedUnits = Unit::whereHas('leases', function ($q) {
+            $q->where('status', 'active');
+        })->count();
         $occupancyRate = $totalUnits > 0 ? round(($occupiedUnits / $totalUnits) * 100) : 0;
 
         // Calculate total revenue from completed payments
@@ -40,7 +39,7 @@ new
         $expenses = Expense::sum('amount');
 
         return [
-            'properties' => \App\Models\Property::count(),
+            'properties' => $totalProperties,
             'units' => $totalUnits,
             'occupied' => $occupiedUnits,
             'occupancy' => $occupancyRate,
@@ -54,7 +53,7 @@ new
     public function financeChart()
     {
         // Get monthly revenue
-        $payments = \App\Models\RentPayment::where('status', \App\Enums\PaymentStatus::Completed)
+        $payments = RentPayment::where('status', PaymentStatus::Completed)
             ->whereYear('paid_at', date('Y'))
             ->selectRaw('extract(month from paid_at) as month, sum(amount) as total')
             ->groupBy('month')
@@ -64,7 +63,7 @@ new
             ->toArray();
 
         // Get monthly expenses
-        $expenses = \App\Models\Expense::whereYear('date', date('Y'))
+        $expenses = Expense::whereYear('date', date('Y'))
             ->selectRaw('extract(month from date) as month, sum(amount) as total')
             ->groupBy('month')
             ->orderBy('month')
@@ -78,7 +77,7 @@ new
 
         // Fill in all 12 months (localized)
         for ($i = 1; $i <= 12; $i++) {
-            $date = \Carbon\Carbon::create(date('Y'), $i, 1);
+            $date = Carbon::create(date('Y'), $i, 1);
             $categories[] = ucfirst($date->translatedFormat('M'));
             $revenueData[] = $payments[$i] ?? 0;
             $expenseData[] = $expenses[$i] ?? 0;
@@ -92,57 +91,86 @@ new
     }
 
     #[Computed]
-    public function recentActivity()
+    public function alerts()
     {
-        return \Spatie\Activitylog\Models\Activity::latest()
-            ->take(5)
-            ->get()
-            ->map(function ($activity) {
-                return [
-                    'description' => $activity->description,
-                    'causer' => $activity->causer ? $activity->causer->name : 'Système',
-                    'subject_type' => class_basename($activity->subject_type),
-                    'created_at' => $activity->created_at->diffForHumans(),
-                    'icon' => match (class_basename($activity->subject_type)) {
-                        'User', 'Renter' => 'user',
-                        'Property', 'Unit' => 'home',
-                        'Lease' => 'document-text',
-                        'RentPayment' => 'banknotes',
-                        'MaintenanceRequest' => 'wrench-screwdriver',
-                        default => 'bell',
-                },
-                    'color' => match (class_basename($activity->subject_type)) {
-                        'User', 'Renter' => 'indigo',
-                        'Property', 'Unit' => 'cyan',
-                        'Lease' => 'amber',
-                        'RentPayment' => 'emerald',
-                        'MaintenanceRequest' => 'rose',
-                        default => 'zinc',
-                },
-                ];
-            });
-    }
+        $alerts = collect();
 
-    #[Computed]
-    public function upcomingExpirations()
-    {
-        return \App\Models\Lease::with(['renter', 'unit.property'])
-            ->where('status', 'active')
-            ->where('end_date', '>=', now())
-            ->where('end_date', '<=', now()->addDays(30))
-            ->orderBy('end_date')
-            ->take(5)
-            ->get();
+        // 1. Overdue Leases (Loyers en retard)
+        $currentMonth = now()->format('Y-m');
+        $currentDate = now();
+        $overdueCount = Lease::where('status', 'active')
+            ->whereDoesntHave('payments', function ($q) use ($currentDate) {
+                $q->whereYear('paid_at', $currentDate->year)
+                  ->whereMonth('paid_at', $currentDate->month)
+                  ->where('status', PaymentStatus::Completed);
+            })
+            // Only consider it an alert if we're past the 5th of the month
+            ->when(now()->day > 5, function ($q) {
+                return $q;
+            }, function ($q) {
+                return $q->whereRaw('1 = 0'); // Return none if before 5th
+            })
+            ->count();
+            
+        if ($overdueCount > 0) {
+            $alerts->push([
+                'type' => 'danger',
+                'icon' => 'banknotes',
+                'title' => 'Loyers en retard',
+                'description' => "{$overdueCount} loyer(s) impayé(s) pour le mois en cours.",
+                'action_label' => 'Relancer',
+                'action_url' => route('tenant.leases.index') . '?status=overdue',
+                'color' => 'bg-rose-500'
+            ]);
+        }
+
+        // 2. Pending Maintenance Requests (Tickets en attente)
+        $pendingMaintenance = MaintenanceRequest::whereIn('status', ['open', 'in_progress'])
+            ->where('priority', 'high')
+            ->count();
+
+        if ($pendingMaintenance > 0) {
+            $alerts->push([
+                'type' => 'warning',
+                'icon' => 'wrench-screwdriver',
+                'title' => 'Tickets urgents',
+                'description' => "{$pendingMaintenance} demande(s) de maintenance urgente(s) en attente.",
+                'action_label' => 'Gérer',
+                'action_url' => route('tenant.maintenance.units.index') . '?priority=high',
+                'color' => 'bg-amber-500'
+            ]);
+        }
+
+        // 3. Available Units (Unités vides et non en maintenance)
+        $emptyUnits = Unit::whereDoesntHave('leases', function ($q) {
+            $q->where('status', 'active');
+        })->whereDoesntHave('maintenanceRequests', function ($q) {
+            $q->whereIn('status', [\App\Enums\MaintenanceStatus::Pending, \App\Enums\MaintenanceStatus::InProgress]);
+        })->count();
+        
+        if ($emptyUnits > 0) {
+            $alerts->push([
+                'type' => 'info',
+                'icon' => 'home',
+                'title' => 'Unités vacantes',
+                'description' => "{$emptyUnits} unité(s) actuellement disponible(s) à la location.",
+                'action_label' => 'Voir',
+                'action_url' => route('tenant.properties.index'),
+                'color' => 'bg-cyan-500'
+            ]);
+        }
+
+        return $alerts;
     }
 
     #[Computed]
     public function overdueLeases()
     {
-        return \App\Models\Lease::with(['renter', 'unit.property'])
+        return Lease::with(['renter', 'unit.property'])
             ->overdue()
             ->get()
             ->map(function ($lease) {
-                $lease->days_overdue = now()->diffInDays(now()->startOfMonth()->addDays(5));
+                $lease->days_overdue = now()->diffInDays(now()->startOfMonth()->addDays(4));
                 return $lease;
             });
     }
@@ -150,13 +178,16 @@ new
     #[Computed]
     public function rentCollectionStats()
     {
-        $activeLeases = \App\Models\Lease::where('status', 'active')->count();
+        $activeLeases = Lease::where('status', 'active')->count();
         $thisMonth = now()->format('Y-m');
 
         // Count leases that have a payment this month
-        $paidCount = \App\Models\Lease::where('status', 'active')
-            ->whereHas('payments', function ($q) use ($thisMonth) {
-                $q->whereRaw("to_char(paid_at, 'YYYY-MM') = ?", [$thisMonth]);
+        $currentDate = now();
+
+        $paidCount = Lease::where('status', 'active')
+            ->whereHas('payments', function ($q) use ($currentDate) {
+                $q->whereYear('paid_at', $currentDate->year)
+                    ->whereMonth('paid_at', $currentDate->month);
             })
             ->count();
 
@@ -175,7 +206,7 @@ new
     public function maintenanceStats()
     {
         // Pluck returns Enum objects as keys if casted, so we need to map them to values
-        $requests = \App\Models\MaintenanceRequest::selectRaw('priority, count(*) as count')
+        $requests = MaintenanceRequest::selectRaw('priority, count(*) as count')
             ->groupBy('priority')
             ->get()
             ->mapWithKeys(fn($item) => [$item->priority->value => $item->count])
@@ -210,18 +241,25 @@ new
         $data = [];
         $categories = [];
 
+        // Fetch all data once to prevent N+1 queries in the loop
+        $units = Unit::select('created_at')->get();
+        $leases = Lease::where('status', 'active')
+            ->select('start_date', 'end_date')
+            ->get();
+
         for ($i = 11; $i >= 0; $i--) {
             $date = now()->subMonths($i);
             $categories[] = ucfirst($date->translatedFormat('M'));
 
-            $totalUnits = Unit::where('created_at', '<=', $date->endOfMonth())->count();
-            $occupiedUnits = Lease::where('status', 'active')
-                ->where('start_date', '<=', $date->endOfMonth())
-                ->where(function ($q) use ($date) {
-                    $q->whereNull('end_date')
-                        ->orWhere('end_date', '>=', $date->startOfMonth());
-                })
-                ->count();
+            $endOfMonth = $date->copy()->endOfMonth();
+            $startOfMonth = $date->copy()->startOfMonth();
+
+            $totalUnits = $units->where('created_at', '<=', $endOfMonth)->count();
+
+            $occupiedUnits = $leases->filter(function ($lease) use ($endOfMonth, $startOfMonth) {
+                return $lease->start_date <= $endOfMonth &&
+                    (!$lease->end_date || $lease->end_date >= $startOfMonth);
+            })->count();
 
             $data[] = $totalUnits > 0 ? round(($occupiedUnits / $totalUnits) * 100) : 0;
         }
@@ -253,7 +291,7 @@ new
                 </livewire:components.onboarding-flash>
                 <flux:button href="{{ route('tenant.leases.index') }}" icon="document-plus" variant="filled" size="sm">
                     Bail</flux:button>
-                <flux:button href="{{ route('tenant.maintenance.index') }}" icon="wrench" variant="filled" size="sm">
+                <flux:button href="{{ route('tenant.maintenance.units.index') }}" icon="wrench" variant="filled" size="sm">
                     Ticket</flux:button>
                 <flux:button href="{{ route('tenant.expenses.index') }}" icon="credit-card" variant="filled" size="sm">
                     Dépense</flux:button>
@@ -279,8 +317,7 @@ new
             </x-dashboard-card>
 
             <!-- Total Properties -->
-            <x-dashboard-card title="Total Propriétés" :value="$this->stats['properties']" icon="home" color="cyan"
-                :trend="['value' => '+5.2%', 'label' => 'vs le mois dernier', 'positive' => true]" />
+            <x-dashboard-card title="Total Propriétés" :value="$this->stats['properties']" icon="home" color="cyan" />
 
             <!-- Units -->
             <x-dashboard-card title="Unités" :value="$this->stats['units']" icon="key" color="emerald">
@@ -295,7 +332,7 @@ new
 
             <!-- Occupancy Rate -->
             <x-dashboard-card title="Taux d'Occupation" :value="$this->stats['occupancy'] . '%'" icon="chart-pie"
-                color="orange" :trend="['value' => '+2.4%', 'label' => 'vs le mois dernier', 'positive' => true]" />
+                color="orange" />
         </div>
 
         <!-- Main Chart and Activity Grid -->
@@ -382,63 +419,47 @@ new
                 </x-flux::card.body>
             </x-flux::card>
 
-            <!-- Live Activity Feed -->
+            <!-- Actionable Alerts -->
             <x-flux::card>
-                <x-flux::card.header icon="bolt" title="Activité en Direct"
-                    subtitle="Activités récentes sur votre espace" />
+                <x-flux::card.header icon="bell-alert" title="À faire / Alertes"
+                    subtitle="Éléments nécessitant votre attention" />
 
                 <x-flux::card.body>
-                    <div class="space-y-0 flex-1 overflow-y-auto">
-                        @forelse($this->recentActivity as $activity)
-                            <div class="relative pl-6 pb-6 last:pb-0 group">
-                                <!-- Timeline Line -->
-                                <div class="absolute left-2.25 top-2 bottom-0 w-0.5 bg-zinc-100 group-last:hidden"></div>
-
-                                <!-- Timeline Dot -->
-                                @php
-                                    $dotColor = match ($activity['color']) {
-                                        'indigo' => 'bg-indigo-500',
-                                        'cyan' => 'bg-cyan-500',
-                                        'emerald' => 'bg-emerald-500',
-                                        'amber' => 'bg-amber-500',
-                                        'rose' => 'bg-rose-500',
-                                        default => 'bg-zinc-500'
-                                    };
-                                    $ringColor = match ($activity['color']) {
-                                        'indigo' => 'bg-indigo-100',
-                                        'cyan' => 'bg-cyan-100',
-                                        'emerald' => 'bg-emerald-100',
-                                        'amber' => 'bg-amber-100',
-                                        'rose' => 'bg-rose-100',
-                                        default => 'bg-zinc-100'
-                                    };
-                                @endphp
-                                <div
-                                    class="absolute left-0 top-1.5 w-5 h-5 rounded-full border-4 border-white {{ $ringColor }} flex items-center justify-center shadow-sm">
-                                    <div class="w-1.5 h-1.5 rounded-full {{ $dotColor }}"></div>
+                    <div class="space-y-4 flex-1 overflow-y-auto">
+                        @forelse($this->alerts as $alert)
+                            <div class="flex items-start gap-4 p-3 rounded-xl bg-white border border-zinc-100 shadow-sm transition-all hover:shadow-md">
+                                <div class="flex-shrink-0 mt-1">
+                                    <div class="w-10 h-10 rounded-full flex items-center justify-center text-white shadow-sm {{ $alert['color'] }}">
+                                        <flux:icon name="{{ $alert['icon'] }}" class="w-5 h-5" />
+                                    </div>
                                 </div>
-
-                                <div class="flex flex-col">
-                                    <p
-                                        class="text-sm font-medium text-zinc-800 group-hover:text-indigo-600 transition-colors">
-                                        {{ $activity['description'] }}
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-bold text-zinc-900 truncate">
+                                        {{ $alert['title'] }}
                                     </p>
-                                    <p class="text-[11px] text-zinc-400 mt-0.5 font-medium">
-                                        {{ $activity['created_at'] }} • par {{ $activity['causer'] }}
+                                    <p class="text-xs text-zinc-500 mt-0.5 line-clamp-2">
+                                        {{ $alert['description'] }}
                                     </p>
+                                </div>
+                                <div class="flex-shrink-0 self-center">
+                                    <flux:button size="sm" variant="filled" href="{{ $alert['action_url'] }}">
+                                        {{ $alert['action_label'] }}
+                                    </flux:button>
                                 </div>
                             </div>
                         @empty
                             <div class="flex flex-col items-center justify-center h-40 text-center">
-                                <div class="bg-zinc-50 p-3 rounded-full mb-3">
-                                    <flux:icon name="inbox" class="text-zinc-300 w-6 h-6" />
+                                <div class="bg-emerald-50 text-emerald-500 p-4 rounded-full mb-3">
+                                    <flux:icon.check-circle class="w-8 h-8" />
                                 </div>
-                                <p class="text-sm text-zinc-500">Aucune activité récente.</p>
+                                <p class="text-sm font-medium text-zinc-900">Tout est à jour !</p>
+                                <p class="text-xs text-zinc-500 mt-1">Aucune action urgente requise.</p>
                             </div>
                         @endforelse
                     </div>
                 </x-flux::card.body>
             </x-flux::card>
+
         </div>
 
         <!-- Dashboard Widgets Row -->
@@ -510,12 +531,8 @@ new
 
             <!-- Maintenance by Priority -->
             <x-flux::card>
-                <x-flux::card.header>
-                    <div class="flex items-center gap-2">
-                        <flux:icon name="wrench-screwdriver" class="text-blue-500 w-5 h-5" />
-                        <x-flux::card.title>Demandes de Maintenance</x-flux::card.title>
-                    </div>
-                </x-flux::card.header>
+                <x-flux::card.header :title="'Demandes de Maintenance'" :subtitle="'Statistiques des demandes de maintenance'"
+                    :icon="'wrench-screwdriver'" />
                 <div class="p-4 space-y-3">
                     <div class="flex items-center justify-between p-3 bg-rose-50 rounded-lg">
                         <div class="flex items-center gap-2">
@@ -556,39 +573,39 @@ new
                 <x-flux::card.body>
                     @if(count($this->expensesByCategory['data']) > 0)
                         <div class="h-72 w-full" x-data="{
-                                init() {
-                                    const data = @js($this->expensesByCategory);
-                                    const colors = ['#6366f1', '#f43f5e', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16'];
-                                    const chart = new ApexCharts(this.$el, {
-                                        series: data.data,
-                                        chart: { type: 'donut', height: 280, fontFamily: 'Instrument Sans, sans-serif' },
-                                        labels: data.labels,
-                                        colors: colors.slice(0, data.labels.length),
-                                        plotOptions: {
-                                            pie: {
-                                                donut: {
-                                                    size: '65%',
-                                                    labels: {
-                                                        show: true,
-                                                        total: {
-                                                            show: true,
-                                                            label: 'Total',
-                                                            formatter: (w) => new Intl.NumberFormat('fr-FR').format(w.globals.seriesTotals.reduce((a, b) => a + b, 0)) + ' XOF'
+                                        init() {
+                                            const data = @js($this->expensesByCategory);
+                                            const colors = ['#6366f1', '#f43f5e', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16'];
+                                            const chart = new ApexCharts(this.$el, {
+                                                series: data.data,
+                                                chart: { type: 'donut', height: 280, fontFamily: 'Instrument Sans, sans-serif' },
+                                                labels: data.labels,
+                                                colors: colors.slice(0, data.labels.length),
+                                                plotOptions: {
+                                                    pie: {
+                                                        donut: {
+                                                            size: '65%',
+                                                            labels: {
+                                                                show: true,
+                                                                total: {
+                                                                    show: true,
+                                                                    label: 'Total',
+                                                                    formatter: (w) => new Intl.NumberFormat('fr-FR').format(w.globals.seriesTotals.reduce((a, b) => a + b, 0)) + ' FCFA'
+                                                                }
+                                                            }
                                                         }
                                                     }
+                                                },
+                                                legend: { position: 'bottom', fontSize: '12px', fontWeight: 500 },
+                                                dataLabels: { enabled: false },
+                                                stroke: { width: 2, colors: ['#fff'] },
+                                                tooltip: {
+                                                    y: { formatter: (val) => new Intl.NumberFormat('fr-FR').format(val) + ' FCFA' }
                                                 }
-                                            }
-                                        },
-                                        legend: { position: 'bottom', fontSize: '12px', fontWeight: 500 },
-                                        dataLabels: { enabled: false },
-                                        stroke: { width: 2, colors: ['#fff'] },
-                                        tooltip: {
-                                            y: { formatter: (val) => new Intl.NumberFormat('fr-FR').format(val) + ' XOF' }
+                                            });
+                                            chart.render();
                                         }
-                                    });
-                                    chart.render();
-                                }
-                            }"></div>
+                                    }"></div>
                     @else
                         <div class="flex flex-col items-center justify-center h-40 text-center">
                             <flux:icon name="chart-pie" class="text-zinc-200 w-10 h-10 mb-2" />
@@ -664,7 +681,7 @@ new
                 <x-slot:selectable>
                     <flux:select wire:model.live="status" size="sm" class="w-full md:w-40">
                         <flux:select.option value="all">Tous statut</flux:select.option>
-                        @foreach(PropertyStatus::cases() as $status)
+                        @foreach(LeaseStatus::cases() as $status)
                             <flux:select.option value="{{ $status->value }}">{{ $status->label() }}</flux:select.option>
                         @endforeach
                     </flux:select>

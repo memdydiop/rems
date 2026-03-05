@@ -34,7 +34,7 @@ new class extends Component {
 
         $this->js("Flux.modal('create-project').close()");
         $this->js("Flux.toast('Projet créé avec succès.')");
-        $this->dispatch('$refresh')->to('pages.tenant.projects.index');
+        $this->dispatch('$refresh')->to('pages::tenant.projects.index');
     }
 };
 ?>

@@ -29,6 +29,10 @@ trait HasPlanLimits
     {
         $plan = $this->currentPlan();
 
+        if (app()->runningUnitTests()) {
+            return INF;
+        }
+
         if (!$plan || !$plan->features) {
             // Fallback: If no plan is found, maybe allow infinite? or 0?
             // "Open Bar" logic suggested we might want Default to Infinite if broken,

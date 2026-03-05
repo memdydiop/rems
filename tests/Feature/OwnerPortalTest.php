@@ -26,7 +26,7 @@ class OwnerPortalTest extends TenantTestCase
         $this->actingAs($user)
             ->get(route('owner.dashboard'))
             ->assertOk()
-            ->assertSee('Bienvenue, ' . $owner->first_name);
+            ->assertSee('Bonjour, ' . $owner->first_name);
     }
 
     public function test_owner_sees_own_properties_stats()

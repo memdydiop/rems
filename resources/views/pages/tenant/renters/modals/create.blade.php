@@ -19,10 +19,10 @@ new class extends Component {
     #[Validate('required|string|max:255')]
     public $last_name = '';
 
-    #[Validate('required|email|max:255|unique:renters,email')]
-    public $email = '';
+    #[Validate('nullable|email|max:255|unique:renters,email')]
+    public $email = null;
 
-    #[Validate('nullable|string|max:20')]
+    #[Validate('required|string|max:20')]
     public $phone = '';
 
     #[Validate('required|in:active,lead,past')]
@@ -37,7 +37,7 @@ new class extends Component {
         Renter::create([
             'first_name' => $this->first_name,
             'last_name' => $this->last_name,
-            'email' => $this->email,
+            'email' => $this->email ?: null,
             'phone' => $this->phone,
             'status' => $this->status,
         ]);
@@ -63,7 +63,8 @@ new class extends Component {
                 <flux:input wire:model="last_name" label="Nom" placeholder="Dupont" />
             </div>
 
-            <flux:input wire:model="email" label="Email" type="email" placeholder="jean.dupont@example.com" />
+            <flux:input wire:model="email" label="Email (Optionnel)" type="email"
+                placeholder="jean.dupont@example.com" />
             <flux:input wire:model="phone" label="Téléphone" placeholder="+221 77 123 45 67" />
 
             <flux:select wire:model="status" label="Statut" placeholder="Sélectionner un statut...">

@@ -6,7 +6,7 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use App\Models\Unit;
 use App\Models\Property;
-use App\Enums\UnitStatus;
+use App\Enums\{UnitStatus, UnitType};
 use Flux\Flux;
 
 new
@@ -17,14 +17,16 @@ new
     public $search = '';
     public $sortCol = 'created_at';
     public $sortAsc = false;
+    public $status = 'all';
+    public $propertyIdFilter = 'all';
+    public $typeFilter = 'all';
+    public $maintenanceFilter = 'all';
 
     // Form State
     public $unitId = null;
     public $name = '';
     public $property_id = '';
-    public $rent_amount = '';
     public $type = ''; // Added type
-    public $status = UnitStatus::Vacant->value;
 
     // Modal State
     public $modalOpen = false;
@@ -34,9 +36,7 @@ new
         return [
             'name' => 'required|string|max:255',
             'property_id' => 'required|exists:properties,id',
-            'type' => 'required|string', // Added type validation
-            'rent_amount' => 'required|numeric|min:0',
-            'status' => 'required|string',
+            'type' => 'required|string',
         ];
     }
 
@@ -45,28 +45,22 @@ new
         return [
             'name.required' => 'Le nom est obligatoire.',
             'property_id.required' => 'La propriété est obligatoire.',
-            'type.required' => 'Le type est obligatoire.', // Added type message
-            'rent_amount.required' => 'Le loyer est obligatoire.',
-            'status.required' => 'Le statut est obligatoire.',
+            'type.required' => 'Le type est obligatoire.',
         ];
     }
 
     #[Computed]
     public function stats()
     {
-        $stats = Unit::toBase()
-            ->selectRaw('count(*) as total')
-            ->selectRaw("count(case when status = 'occupied' then 1 end) as occupied")
-            ->selectRaw("count(case when status = 'vacant' then 1 end) as vacant")
-            ->first();
-
-        $total = $stats->total ?? 0;
-        $occupied = $stats->occupied ?? 0;
+        $total = Unit::count();
+        $occupied = Unit::has('leases', '>=', 1, 'and', function($query) {
+            $query->where('status', 'active');
+        })->count();
         
         return [
             'total' => $total,
             'occupied' => $occupied,
-            'vacant' => $stats->vacant ?? 0,
+            'vacant' => $total - $occupied,
             'occupancy_rate' => $total > 0 ? round(($occupied / $total) * 100) : 0,
         ];
     }
@@ -76,11 +70,37 @@ new
     {
         return Unit::query()
             ->with(['property'])
-            ->where(function ($query) {
-                $query->where('name', 'like', '%' . $this->search . '%')
-                    ->orWhereHas('property', function ($q) {
-                        $q->where('name', 'like', '%' . $this->search . '%');
+            ->when($this->status !== 'all', function ($query) {
+                if ($this->status === 'occupied') {
+                    $query->whereHas('leases', fn($q) => $q->where('status', 'active'));
+                } else {
+                    $query->whereDoesntHave('leases', fn($q) => $q->where('status', 'active'));
+                }
+            })
+            ->when($this->propertyIdFilter !== 'all', function ($query) {
+                $query->where('property_id', $this->propertyIdFilter);
+            })
+            ->when($this->typeFilter !== 'all', function ($query) {
+                $query->where('type', $this->typeFilter);
+            })
+            ->when($this->maintenanceFilter !== 'all', function ($query) {
+                if ($this->maintenanceFilter === 'maintenance') {
+                    $query->whereHas('maintenanceRequests', function ($q) {
+                        $q->whereIn('status', [\App\Enums\MaintenanceStatus::Pending, \App\Enums\MaintenanceStatus::InProgress]);
                     });
+                } else {
+                    $query->whereDoesntHave('maintenanceRequests', function ($q) {
+                        $q->whereIn('status', [\App\Enums\MaintenanceStatus::Pending, \App\Enums\MaintenanceStatus::InProgress]);
+                    });
+                }
+            })
+            ->when($this->search, function ($query) {
+                $query->where(function ($q) {
+                    $q->where('name', 'like', '%' . $this->search . '%')
+                        ->orWhereHas('property', function ($q) {
+                            $q->where('name', 'like', '%' . $this->search . '%');
+                        });
+                });
             })
             ->orderBy($this->sortCol, $this->sortAsc ? 'asc' : 'desc')
             ->paginate(10);
@@ -113,10 +133,7 @@ new
         $this->unitId = $unit->id;
         $this->name = $unit->name;
         $this->property_id = $unit->property_id;
-        $this->type = $unit->type->value; // Added type
-        $this->rent_amount = $unit->rent_amount;
-        $this->status = $unit->status->value;
-
+        $this->type = $unit->type->value;
         $this->modalOpen = true;
     }
 
@@ -129,18 +146,14 @@ new
             $unit->update([
                 'name' => $this->name,
                 'property_id' => $this->property_id,
-                'type' => $this->type, // Added type
-                'rent_amount' => $this->rent_amount,
-                'status' => $this->status,
+                'type' => $this->type,
             ]);
             Flux::toast('Unité mise à jour avec succès.', 'success');
         } else {
             Unit::create([
                 'name' => $this->name,
                 'property_id' => $this->property_id,
-                'type' => $this->type, // Added type
-                'rent_amount' => $this->rent_amount,
-                'status' => $this->status,
+                'type' => $this->type,
             ]);
             Flux::toast('Unité créée avec succès.', 'success');
         }
@@ -160,8 +173,7 @@ new
 
     public function resetForm()
     {
-        $this->reset(['unitId', 'name', 'property_id', 'type', 'rent_amount', 'status']); // Added type
-        $this->status = UnitStatus::Vacant->value;
+        $this->reset(['unitId', 'name', 'property_id', 'type']);
     }
 };
 ?>
@@ -191,12 +203,33 @@ new
 
             <x-flux::table :paginate="$this->units" search linesPerPage>
                 <x-slot:selectable>
-                    <flux:select wire:model.live="status" size="sm" class="w-full md:w-40">
-                        <flux:select.option value="all">Tous statut</flux:select.option>
-                        @foreach(UnitStatus::cases() as $status)
-                            <flux:select.option value="{{ $status->value }}">{{ $status->label() }}</flux:select.option>
-                        @endforeach
-                    </flux:select>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <flux:select wire:model.live="status" size="sm" class="w-full md:w-36">
+                            <flux:select.option value="all">Tous statuts</flux:select.option>
+                            <flux:select.option value="vacant">Vacant</flux:select.option>
+                            <flux:select.option value="occupied">Occupé</flux:select.option>
+                        </flux:select>
+
+                        <flux:select wire:model.live="maintenanceFilter" size="sm" class="w-full md:w-40">
+                            <flux:select.option value="all">Toutes maintenances</flux:select.option>
+                            <flux:select.option value="maintenance">En maintenance</flux:select.option>
+                            <flux:select.option value="ready">Prêt à louer</flux:select.option>
+                        </flux:select>
+
+                        <flux:select wire:model.live="propertyIdFilter" size="sm" class="w-full md:w-48">
+                            <flux:select.option value="all">Toutes propriétés</flux:select.option>
+                            @foreach($this->properties as $property)
+                                <flux:select.option value="{{ $property->id }}">{{ $property->name }}</flux:select.option>
+                            @endforeach
+                        </flux:select>
+
+                        <flux:select wire:model.live="typeFilter" size="sm" class="w-full md:w-40">
+                            <flux:select.option value="all">Tous types</flux:select.option>
+                            @foreach(UnitType::cases() as $typeCase)
+                                <flux:select.option value="{{ $typeCase->value }}">{{ $typeCase->label() }}</flux:select.option>
+                            @endforeach
+                        </flux:select>
+                    </div>
                 </x-slot:selectable>
 
                 <x-flux::table.columns>
@@ -204,9 +237,6 @@ new
                         wire:click="sortBy('name')">Nom</x-flux::table.column>
                     <x-flux::table.column>Propriété</x-flux::table.column>
                     <x-flux::table.column>Type</x-flux::table.column> <!-- Added Type -->
-                    <x-flux::table.column sortable :sorted="$sortCol === 'rent_amount'"
-                        :direction="$sortAsc ? 'asc' : 'desc'"
-                        wire:click="sortBy('rent_amount')">Loyer</x-flux::table.column>
                     <x-flux::table.column sortable :sorted="$sortCol === 'status'"
                         :direction="$sortAsc ? 'asc' : 'desc'"
                         wire:click="sortBy('status')">Statut</x-flux::table.column>
@@ -236,15 +266,17 @@ new
                             </x-flux::table.cell>
 
                             <x-flux::table.cell>
-                                <span class="font-mono text-zinc-700 font-medium">{{ number_format($unit->rent_amount, 0, ',', ' ') }}
-                                        FCFA</span>
-                            </x-flux::table.cell>
-
-                            <x-flux::table.cell>
-                                @php $statusEnum = UnitStatus::tryFrom($unit->status->value); @endphp
-                                <flux:badge color="{{ $statusEnum?->color() ?? 'zinc' }}" size="sm" inset="top bottom">
-                                    {{ $statusEnum?->label() ?? $unit->status }}
-                                </flux:badge>
+                                <div class="flex items-center gap-2">
+                                    <flux:badge :color="$unit->status->color()" size="sm" inset="top bottom">
+                                        {{ $unit->status->label() }}
+                                    </flux:badge>
+                                    
+                                    @if($unit->isUnderMaintenance())
+                                        <flux:badge color="orange" size="sm" icon="wrench-screwdriver" inset="top bottom">
+                                            Maintenance
+                                        </flux:badge>
+                                    @endif
+                                </div>
                             </x-flux::table.cell>
 
                             <x-flux::table.cell>
@@ -291,15 +323,15 @@ new
                     <flux:select.option value="" disabled>Sélectionner</flux:select.option>
                     
                     <optgroup label="Résidentiel">
-                        @foreach (\App\Enums\UnitType::cases() as $type)
-                            @if(in_array($type->value, ['apartment', 'studio', 'room', 'entire_house']))
+                        @foreach (UnitType::cases() as $type)
+                            @if(in_array($type->value, ['studio', 'f1', 'f2', 'f3', 'f4', 'f5_plus', 'room', 'entire_house']))
                                 <flux:select.option value="{{ $type->value }}">{{ $type->label() }}</flux:select.option>
                             @endif
                         @endforeach
                     </optgroup>
 
                     <optgroup label="Commercial">
-                        @foreach (\App\Enums\UnitType::cases() as $type)
+                        @foreach (UnitType::cases() as $type)
                             @if(in_array($type->value, ['office', 'retail', 'restaurant', 'storage']))
                                 <flux:select.option value="{{ $type->value }}">{{ $type->label() }}</flux:select.option>
                             @endif
@@ -307,7 +339,7 @@ new
                     </optgroup>
 
                     <optgroup label="Autre">
-                        @foreach (\App\Enums\UnitType::cases() as $type)
+                        @foreach (UnitType::cases() as $type)
                             @if(in_array($type->value, ['parking', 'garage', 'land']))
                                 <flux:select.option value="{{ $type->value }}">{{ $type->label() }}</flux:select.option>
                             @endif
@@ -315,17 +347,7 @@ new
                     </optgroup>
                 </flux:select>
 
-                <flux:input wire:model="rent_amount" label="Loyer mensuel" type="number" min="0" step="0.01">
-                    <x-slot:iconTrailing>
-                        <span class="text-zinc-500 text-xs px-2">FCFA</span>
-                        </x-slot:iconTrailing>
-                </flux:input>
-
-                <flux:select wire:model="status" label="Statut">
-                    @foreach (\App\Enums\UnitStatus::cases() as $status)
-                        <flux:select.option value="{{ $status->value }}">{{ $status->label() }}</flux:select.option>
-                    @endforeach
-                </flux:select>
+                <flux:input wire:model="name" label="Nom du lot" placeholder="Ex: Appartement A1, Bureau 204" />
 
                 <div class="flex justify-end gap-2">
                     <flux:modal.close>

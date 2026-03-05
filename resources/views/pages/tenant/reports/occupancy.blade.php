@@ -97,7 +97,7 @@ new
         </x-slot>
 
         <!-- Summary Stats -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
             <x-flux::card class="bg-blue-50 border-blue-200">
                 <div class="p-4 text-center">
                     <p class="text-3xl font-bold text-blue-700">{{ $this->occupancyData['totalUnits'] }}</p>
@@ -127,10 +127,10 @@ new
             </x-flux::card>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <!-- Occupancy Chart -->
             <x-flux::card>
-                <x-flux::card.header title="Répartition" />
+                <x-flux::card.header title="Répartition" subtitle="Répartition des unités par statut." />
                 <div class="p-4 h-64" x-data="{
                     init() {
                         const options = {
@@ -161,7 +161,7 @@ new
 
             <!-- By Property Chart -->
             <x-flux::card>
-                <x-flux::card.header title="Par Propriété" />
+                <x-flux::card.header title="Par Propriété" subtitle="Répartition des unités par propriété." />
                 <div class="p-4 h-64" x-data="{
                     init() {
                         const options = {
@@ -189,8 +189,8 @@ new
 
         <!-- Vacant Units Table -->
         <x-flux::card>
-            <x-flux::card.header title="Unités Vacantes" />
-            <x-flux::table>
+            <x-flux::card.header title="Unités Vacantes" subtitle="Liste des unités vacantes." />
+            <x-flux::table search linesPerPage>
                 <x-flux::table.columns>
                     <x-flux::table.column>Propriété</x-flux::table.column>
                     <x-flux::table.column>Unité</x-flux::table.column>
