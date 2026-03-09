@@ -13,9 +13,12 @@ use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class MaintenanceRequest extends Model
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
+
+class MaintenanceRequest extends Model implements HasMedia
 {
-    use HasFactory, HasUuids, LogsActivity, SoftDeletes;
+    use HasFactory, HasUuids, LogsActivity, SoftDeletes, InteractsWithMedia;
 
     protected $fillable = [
         'title',
@@ -26,7 +29,7 @@ class MaintenanceRequest extends Model
         'priority',
         'property_id',
         'unit_id',
-        'renter_id',
+        'client_id',
         'user_id',
         'photo_path',
         'reported_by',
@@ -49,12 +52,12 @@ class MaintenanceRequest extends Model
 
     public function property(): BelongsTo
     {
-        return $this->belongsTo(Property::class);
+        return $this->belongsTo(Property::class)->withTrashed();
     }
 
     public function unit(): BelongsTo
     {
-        return $this->belongsTo(Unit::class);
+        return $this->belongsTo(Unit::class)->withTrashed();
     }
 
     public function user(): BelongsTo
@@ -62,9 +65,9 @@ class MaintenanceRequest extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function renter(): BelongsTo
+    public function client(): BelongsTo
     {
-        return $this->belongsTo(Renter::class);
+        return $this->belongsTo(Client::class);
     }
 
     public function isEditable(): bool

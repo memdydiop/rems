@@ -19,6 +19,8 @@ class RentPayment extends Model
         'lease_id',
         'amount',
         'paid_at',
+        'period_start',
+        'period_end',
         'method',
         'status',
         'notes',
@@ -26,6 +28,8 @@ class RentPayment extends Model
 
     protected $casts = [
         'paid_at' => 'date',
+        'period_start' => 'date',
+        'period_end' => 'date',
         'amount' => 'decimal:2',
         'status' => PaymentStatus::class,
     ];
@@ -41,5 +45,14 @@ class RentPayment extends Model
     public function lease(): BelongsTo
     {
         return $this->belongsTo(Lease::class);
+    }
+
+    public function getMonthsCountAttribute(): int
+    {
+        if (!$this->period_start || !$this->period_end) {
+            return 1;
+        }
+
+        return $this->period_start->diffInMonths($this->period_end) + 1;
     }
 }

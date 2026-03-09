@@ -25,7 +25,6 @@ class UnitController extends Controller
             'property_id' => 'required|uuid|exists:properties,id',
             'name' => 'required|string|max:255',
             'type' => 'nullable|string',
-            'rent_amount' => 'required|numeric|min:0',
             'status' => 'sometimes|string',
         ]);
 
@@ -46,7 +45,6 @@ class UnitController extends Controller
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
             'type' => 'sometimes|string',
-            'rent_amount' => 'sometimes|numeric|min:0',
             'status' => 'sometimes|string',
         ]);
 

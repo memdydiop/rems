@@ -18,7 +18,7 @@ new
     #[Computed]
     public function recentLeases()
     {
-        return Lease::with(['renter', 'unit.property'])
+        return Lease::with(['client', 'unit.property'])
             ->when($this->status !== 'all', fn($q) => $q->where('status', $this->status))
             ->latest('start_date')
             ->paginate(5);
@@ -28,8 +28,12 @@ new
     public function stats()
     {
         $totalProperties = Property::count();
-        $totalUnits = Unit::count();
-        $occupiedUnits = Unit::whereHas('leases', function ($q) {
+        $totalUnits = Unit::whereHas('property', function ($q) {
+            $q->whereNull('deleted_at');
+        })->count();
+        $occupiedUnits = Unit::whereHas('property', function ($q) {
+            $q->whereNull('deleted_at');
+        })->whereHas('leases', function ($q) {
             $q->where('status', 'active');
         })->count();
         $occupancyRate = $totalUnits > 0 ? round(($occupiedUnits / $totalUnits) * 100) : 0;
@@ -166,7 +170,7 @@ new
     #[Computed]
     public function overdueLeases()
     {
-        return Lease::with(['renter', 'unit.property'])
+        return Lease::with(['client', 'unit.property'])
             ->overdue()
             ->get()
             ->map(function ($lease) {
@@ -269,22 +273,36 @@ new
             'data' => $data,
         ];
     }
+
+    public function restartTutorial()
+    {
+        $user = auth()->user();
+        $user->onboarding_steps = null;
+        $user->save();
+
+        $this->dispatch('onboarding-step-seen');
+    }
 };
 ?>
-
 <div>
     <x-layouts::content subheading="Voici ce qui se passe dans votre espace de travail aujourd'hui.">
         <x-slot:heading>
-            <livewire:components.onboarding-flash 
-                step="dashboard_welcome" 
-                title="👋 Bienvenue sur votre Tableau de Bord"
-                description="C'est ici que vous aurez une vue d'ensemble sur vos revenus, dépenses et unités occupées."
-                align="bottom"
-                :currentStepNumber="1"
-                :totalSteps="5"
-            >
-                Bonjour, {{ auth()->user()->name }} !
-            </livewire:components.onboarding-flash>
+            <div class="flex items-center gap-4">
+                <livewire:components.onboarding-flash 
+                    step="dashboard_welcome" 
+                    title="👋 Bienvenue sur votre Tableau de Bord"
+                    description="C'est ici que vous aurez une vue d'ensemble sur vos revenus, dépenses et unités occupées."
+                    align="bottom"
+                    :currentStepNumber="1"
+                    :totalSteps="5"
+                >
+                    Bonjour, {{ auth()->user()->name }} !
+                </livewire:components.onboarding-flash>
+
+                <flux:button wire:click="restartTutorial" variant="ghost" size="xs" icon="arrow-path" class="text-zinc-400 hover:text-blue-600 transition-colors">
+                    Revoir le tutoriel
+                </flux:button>
+            </div>
         </x-slot:heading>
 
         <x-slot:actions>
@@ -298,7 +316,7 @@ new
                     requiredStep="dashboard_welcome"
                     title="🏢 Gérez vos Biens"
                     description="Ajoutez vos immeubles, maisons ou appartements ici pour commencer à les gérer."
-                    align="bottom"
+                    align="bottom-right"
                     :currentStepNumber="2"
                     :totalSteps="5"
                 >
@@ -311,8 +329,8 @@ new
                     step="dashboard_add_lease" 
                     requiredStep="dashboard_add_property"
                     title="📄 Créez vos Baux"
-                    description="Une fois vos unités créées, associez-leur des locataires via un contrat de bail."
-                    align="bottom"
+                    description="Une fois vos unités créées, associez-leur des clients via un contrat de bail."
+                    align="bottom-right"
                     :currentStepNumber="3"
                     :totalSteps="5"
                 >
@@ -326,7 +344,7 @@ new
                     requiredStep="dashboard_add_lease"
                     title="🔧 Suivez la Maintenance"
                     description="Centralisez toutes les demandes de réparation et de travaux pour vos biens."
-                    align="bottom"
+                    align="bottom-right"
                     :currentStepNumber="4"
                     :totalSteps="5"
                 >
@@ -340,7 +358,7 @@ new
                     requiredStep="dashboard_add_ticket"
                     title="💰 Suivez vos Dépenses"
                     description="Enregistrez vos factures et charges pour calculer automatiquement votre rentabilité."
-                    align="bottom"
+                    align="bottom-right"
                     :currentStepNumber="5"
                     :totalSteps="5"
                 >
@@ -554,12 +572,17 @@ new
                         <div
                             class="flex items-center justify-between py-2 {{ !$loop->last ? 'border-b border-zinc-100' : '' }}">
                             <div class="flex items-center gap-2">
-                                <flux:avatar src="https://i.pravatar.cc/150?u={{ $lease->renter->email }}" size="xs" />
+                                <flux:avatar src="https://i.pravatar.cc/150?u={{ $lease->client->email }}" size="xs" />
                                 <div>
-                                    <p class="text-sm font-medium text-zinc-900">{{ $lease->renter->first_name }}
-                                        {{ $lease->renter->last_name }}
+                                    <p class="text-sm font-medium text-zinc-900">{{ $lease->client->first_name }}
+                                        {{ $lease->client->last_name }}
                                     </p>
-                                    <p class="text-xs text-zinc-500">{{ $lease->unit->property->name }}</p>
+                                    <p class="text-xs text-zinc-500">
+                                        {{ $lease->unit?->property?->name ?? 'N/A' }}
+                                        @if($lease->unit?->property?->trashed())
+                                            <span class="text-rose-500 text-2xs">(Supprimé)</span>
+                                        @endif
+                                    </p>
                                 </div>
                             </div>
                             <div class="text-right">
@@ -741,7 +764,7 @@ new
                 </x-slot:selectable>
 
                 <x-flux::table.columns>
-                    <x-flux::table.column>Locataire</x-flux::table.column>
+                    <x-flux::table.column>Client</x-flux::table.column>
                     <x-flux::table.column>Propriété - Unité</x-flux::table.column>
                     <x-flux::table.column>Loyer</x-flux::table.column>
                     <x-flux::table.column>Statut</x-flux::table.column>
@@ -753,17 +776,21 @@ new
                         <x-flux::table.row :key="$lease->id">
                             <x-flux::table.cell>
                                 <div class="flex items-center gap-3">
-                                    <x-flux::avatar src="https://i.pravatar.cc/150?u={{ $lease->renter->email }}" size="xs"
+                                    <x-flux::avatar src="https://i.pravatar.cc/150?u={{ $lease->client->email }}" size="xs"
                                         class="ring-2 ring-white shadow-sm" />
-                                    <span class="font-medium text-zinc-900">{{ $lease->renter->first_name }}
-                                        {{ $lease->renter->last_name }}</span>
+                                    <span class="font-medium text-zinc-900">{{ $lease->client->first_name }}
+                                        {{ $lease->client->last_name }}</span>
                                 </div>
                             </x-flux::table.cell>
                             <x-flux::table.cell>
                                 <div class="flex flex-col">
-                                    <span
-                                        class="text-sm font-medium text-zinc-900">{{ $lease->unit->property->name }}</span>
-                                    <span class="text-xs text-zinc-500">{{ $lease->unit->name }}</span>
+                                    <span class="text-sm font-medium text-zinc-900">
+                                        {{ $lease->unit?->property?->name ?? 'N/A' }}
+                                        @if($lease->unit?->property?->trashed())
+                                            <span class="text-rose-500 text-2xs font-normal">(Supprimé)</span>
+                                        @endif
+                                    </span>
+                                    <span class="text-xs text-zinc-500">{{ $lease->unit?->name ?? 'N/A' }}</span>
                                 </div>
                             </x-flux::table.cell>
                             <x-flux::table.cell variant="strong">
@@ -794,7 +821,6 @@ new
                 </x-flux::table.rows>
             </x-flux::table>
         </x-flux::card>
-
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+        <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     </x-layouts::content>
 </div>

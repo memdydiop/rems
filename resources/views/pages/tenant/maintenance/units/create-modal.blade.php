@@ -7,7 +7,6 @@ use Livewire\Component;
 use Livewire\Attributes\Validate;
 use Livewire\Attributes\On;
 use Livewire\WithFileUploads;
-use App\Models\Renter;
 use Flux\Flux;
 
 new class extends Component {

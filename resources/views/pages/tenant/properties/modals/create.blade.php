@@ -1,6 +1,6 @@
 <?php
 
-use App\Enums\PropertyType;
+use App\Enums\{PropertyType, PropertyAmenity, TransactionType};
 use App\Models\{Property, Owner};
 use Livewire\Component;
 use Livewire\Attributes\Validate;
@@ -19,12 +19,17 @@ new class extends Component {
     #[Validate('nullable|exists:owners,id')]
     public $owner_id = '';
 
-    // New Owner Fields
-    public bool $isCreatingOwner = false;
-    public $newOwnerFirstName = '';
-    public $newOwnerLastName = '';
-    public $newOwnerEmail = '';
-    public $newOwnerPhone = '';
+    // Property & Standalone unit fields
+    public $transaction_type = 'rental';
+    public $sale_price = '';
+    public $surface_area = '';
+    public $rent_amount = '';
+    public $notes = '';
+    public $amenities = [];
+
+    // Property & Standalone unit fields
+
+    // Property & Standalone unit fields
 
     public ?Property $property = null;
     public bool $modalOpen = false;
@@ -51,7 +56,18 @@ new class extends Component {
                 $this->name = $this->property->name ?? '';
                 $this->address = $this->property->address ?? '';
                 $this->type = $this->property->type?->value ?? 'apartment';
+                $this->transaction_type = $this->property->transaction_type ?? 'rental';
+                $this->sale_price = $this->property->sale_price ?? '';
                 $this->owner_id = $this->property->owner_id ?? '';
+                $this->amenities = $this->property->amenities ?? [];
+                $this->amenities = $this->property->amenities ?? [];
+                // For standalone properties, load unit details if available
+                if ($this->property->type?->isStandalone() && $this->property->units->isNotEmpty()) {
+                    $unit = $this->property->units->first();
+                    $this->surface_area = $unit->surface_area ?? '';
+                    $this->rent_amount = $unit->rent_amount ?? '';
+                    $this->notes = $unit->notes ?? '';
+                }
                 $this->fromOwner = false;
                 $this->isCreatingOwner = false;
                 $this->modalOpen = true;
@@ -64,7 +80,13 @@ new class extends Component {
         $this->name = '';
         $this->address = '';
         $this->type = 'residential_building';
-        $this->owner_id = '';
+        $this->transaction_type = 'rental';
+        $this->sale_price = '';
+        $this->surface_area = '';
+        $this->rent_amount = '';
+        $this->notes = '';
+        $this->amenities = [];
+        $this->amenities = [];
         $this->isCreatingOwner = false;
         $this->newOwnerFirstName = '';
         $this->newOwnerLastName = '';
@@ -74,10 +96,13 @@ new class extends Component {
 
     public function toggleCreateOwner()
     {
-        $this->isCreatingOwner = !$this->isCreatingOwner;
-        if ($this->isCreatingOwner) {
-            $this->owner_id = ''; // Clear selection if switching to create mode
-        }
+        $this->dispatch('open-modal', name: 'create-owner');
+    }
+
+    #[On('owner-created')]
+    public function onOwnerCreated($ownerId)
+    {
+        $this->owner_id = $ownerId;
     }
 
     public function save()
@@ -88,33 +113,23 @@ new class extends Component {
             return;
         }
 
-        $data = $this->validate();
+        $data = $this->validate([
+            'name' => 'required|string|max:255',
+            'address' => 'nullable|string|max:500',
+            'type' => 'required',
+            'owner_id' => 'nullable|exists:owners,id',
+            'surface_area' => 'nullable|numeric|min:0',
+            'rent_amount' => 'nullable|numeric|min:0',
+            'transaction_type' => 'required|string|in:' . implode(',', array_column(TransactionType::cases(), 'value')),
+            'sale_price' => 'nullable|numeric|min:0',
+            'notes' => 'nullable|string|max:1000',
+            'amenities' => 'nullable|array',
+            'amenities.*' => 'in:' . implode(',', array_column(PropertyAmenity::cases(), 'value')),
+        ]);
 
-        // Handle Inline Owner Creation
-        if ($this->isCreatingOwner && !$this->fromOwner) {
-            $ownerData = $this->validate([
-                'newOwnerFirstName' => 'required|string|max:255',
-                'newOwnerLastName' => 'required|string|max:255',
-                'newOwnerEmail' => 'nullable|email|max:255',
-                'newOwnerPhone' => 'nullable|string|max:20',
-            ], [
-                'newOwnerFirstName.required' => 'Le prénom du propriétaire est requis.',
-                'newOwnerLastName.required' => 'Le nom du propriétaire est requis.',
-            ]);
-
-            $owner = Owner::create([
-                'first_name' => $this->newOwnerFirstName,
-                'last_name' => $this->newOwnerLastName,
-                'email' => $this->newOwnerEmail,
-                'phone' => $this->newOwnerPhone,
-            ]);
-
-            $data['owner_id'] = $owner->id;
-        } else {
-            // Remove empty strings for nullable fields if necessary
-            if ($data['owner_id'] === '') {
-                $data['owner_id'] = null;
-            }
+        // Remove empty strings for nullable fields if necessary
+        if ($data['owner_id'] === '') {
+            $data['owner_id'] = null;
         }
 
         // Check limits before creating
@@ -127,13 +142,53 @@ new class extends Component {
             }
         }
 
+        // Prepare common property data
+        $propertyData = [
+            'name' => $data['name'],
+            'address' => $data['address'],
+            'type' => $data['type'],
+            'owner_id' => $data['owner_id'],
+            'amenities' => $data['amenities'] ?: [],
+            'transaction_type' => $data['transaction_type'],
+        ];
+
         if ($this->property) {
-            $this->property->update($data);
+            $this->property->update($propertyData);
+
+            // Update unit if standalone
+            if ($this->property->type?->isStandalone() && $this->property->units->isNotEmpty()) {
+                $unit = $this->property->units->first();
+                $unit->update([
+                    'transaction_type' => $data['transaction_type'],
+                    'sale_price' => $data['transaction_type'] === 'sale' ? ($data['sale_price'] ?: null) : null,
+                    'rent_amount' => $data['transaction_type'] === 'rental' ? ($data['rent_amount'] ?: null) : null,
+                    'surface_area' => $data['surface_area'] ?: null,
+                    'notes' => $data['notes'] ?: null,
+                    'amenities' => $data['amenities'] ?: [],
+                ]);
+            }
             $this->js("Flux.toast('Propriété mise à jour.')");
         } else {
             // Add default status
-            $data['status'] = 'active';
-            Property::create($data);
+            $propertyData['status'] = 'active';
+            $property = Property::create($propertyData);
+
+            // Handle Standalone Property (Auto-create unit)
+            $propertyType = PropertyType::from($this->type);
+            if ($propertyType->isStandalone()) {
+                $unitType = $this->getDefaultUnitType($propertyType);
+                $property->units()->create([
+                    'name' => $property->name,
+                    'type' => $unitType,
+                    'transaction_type' => $data['transaction_type'],
+                    'sale_price' => $data['transaction_type'] === 'sale' ? ($data['sale_price'] ?: null) : null,
+                    'rent_amount' => $data['transaction_type'] === 'rental' ? ($data['rent_amount'] ?: null) : null,
+                    'surface_area' => $data['surface_area'] ?: null,
+                    'notes' => $data['notes'] ?: null,
+                    'amenities' => $data['amenities'] ?: [],
+                    'status' => 'vacant',
+                ]);
+            }
             $this->js("Flux.toast('Propriété créée avec succès.')");
         }
 
@@ -144,10 +199,21 @@ new class extends Component {
             return redirect()->route('tenant.properties.index');
         }
     }
+
+    protected function getDefaultUnitType(PropertyType $propertyType): string
+    {
+        return match ($propertyType) {
+            PropertyType::Villa, PropertyType::House => 'entire_house',
+            PropertyType::Warehouse => 'storage',
+            PropertyType::Land => 'land',
+            PropertyType::Factory, PropertyType::IndustrialComplex => 'storage', // Fallback
+            default => 'studio',
+        };
+    }
 };
 ?>
 
-<flux:modal wire:model="modalOpen" class="md:w-[28rem]">
+<flux:modal wire:model="modalOpen" class="md:w-xl">
     <form wire:submit="save" class="space-y-6">
         <div>
             <h2 class="text-lg font-bold text-zinc-900">
@@ -160,90 +226,114 @@ new class extends Component {
             <flux:input wire:model="name" label="{{ __('Nom') }}" placeholder="Résidence..." />
             <flux:textarea wire:model="address" label="{{ __('Adresse') }}" placeholder="Adresse complète..." />
 
-            <flux:select wire:model="type" label="{{ __('Type') }}" placeholder="Choisir un type...">
-                <flux:select.option value="" disabled>Sélectionner</flux:select.option>
+            <div class="grid grid-cols-2 gap-4">
+                <flux:select wire:model.live="type" label="{{ __('Type') }}" placeholder="Choisir un type...">
 
-                <optgroup label="Résidentiel">
-                    @foreach (PropertyType::cases() as $type)
-                        @if(in_array($type->value, ['residential_building', 'villa', 'house', 'compound']))
-                            <flux:select.option value="{{ $type->value }}">{{ $type->label() }}</flux:select.option>
-                        @endif
-                    @endforeach
-                </optgroup>
+                    <optgroup label="Résidentiel">
+                        @foreach (PropertyType::cases() as $type_case)
+                            @if($type_case->category() === 'residential')
+                                <flux:select.option value="{{ $type_case->value }}">{{ $type_case->label() }}
+                                </flux:select.option>
+                            @endif
+                        @endforeach
+                    </optgroup>
 
-                <optgroup label="Commercial">
-                    @foreach (PropertyType::cases() as $type)
-                        @if(in_array($type->value, ['commercial_building', 'shopping_center', 'hotel']))
-                            <flux:select.option value="{{ $type->value }}">{{ $type->label() }}</flux:select.option>
-                        @endif
-                    @endforeach
-                </optgroup>
+                    <optgroup label="Commercial">
+                        @foreach (PropertyType::cases() as $type_case)
+                            @if($type_case->category() === 'commercial')
+                                <flux:select.option value="{{ $type_case->value }}">{{ $type_case->label() }}
+                                </flux:select.option>
+                            @endif
+                        @endforeach
+                    </optgroup>
 
-                <optgroup label="Mixte">
-                    @foreach (PropertyType::cases() as $type)
-                        @if(in_array($type->value, ['mixed_use']))
-                            <flux:select.option value="{{ $type->value }}">{{ $type->label() }}</flux:select.option>
-                        @endif
-                    @endforeach
-                </optgroup>
+                    <optgroup label="Mixte">
+                        @foreach (PropertyType::cases() as $type_case)
+                            @if($type_case->category() === 'mixed')
+                                <flux:select.option value="{{ $type_case->value }}">{{ $type_case->label() }}
+                                </flux:select.option>
+                            @endif
+                        @endforeach
+                    </optgroup>
 
-                <optgroup label="Industriel">
-                    @foreach (PropertyType::cases() as $type)
-                        @if(in_array($type->value, ['warehouse', 'factory', 'industrial_complex']))
-                            <flux:select.option value="{{ $type->value }}">{{ $type->label() }}</flux:select.option>
-                        @endif
-                    @endforeach
-                </optgroup>
+                    <optgroup label="Industriel">
+                        @foreach (PropertyType::cases() as $type_case)
+                            @if($type_case->category() === 'industrial')
+                                <flux:select.option value="{{ $type_case->value }}">{{ $type_case->label() }}
+                                </flux:select.option>
+                            @endif
+                        @endforeach
+                    </optgroup>
 
-                <optgroup label="Terrain">
-                    @foreach (PropertyType::cases() as $type)
-                        @if(in_array($type->value, ['land']))
-                            <flux:select.option value="{{ $type->value }}">{{ $type->label() }}</flux:select.option>
-                        @endif
-                    @endforeach
-                </optgroup>
-            </flux:select>
+                    <optgroup label="Terrain">
+                        @foreach (PropertyType::cases() as $type_case)
+                            @if($type_case->category() === 'land')
+                                <flux:select.option value="{{ $type_case->value }}">{{ $type_case->label() }}
+                                </flux:select.option>
+                            @endif
+                        @endforeach
+                    </optgroup>
+                </flux:select>
 
-            @if(!$fromOwner)
-                <div class="border-t border-zinc-200 py-4 mt-2">
-                    @if(!$isCreatingOwner)
-                        <div class="flex items-end gap-3">
-                            <div class="flex-1">
-                                <flux:select wire:model="owner_id" label="{{ __('Propriétaire') }}"
-                                    placeholder="{{ __('Sélectionner un propriétaire...') }}">
-                                    <flux:select.option value="">{{ __('Aucun') }}</flux:select.option>
-                                    @foreach (Owner::all() as $owner)
-                                        <flux:select.option value="{{ $owner->id }}">{{ $owner->first_name }}
-                                            {{ $owner->last_name }}
-                                        </flux:select.option>
-                                    @endforeach
-                                </flux:select>
-                            </div>
-                            <flux:button variant="primary" wire:click="toggleCreateOwner" icon="plus" class=""
-                                tooltip="Nouveau propriétaire"/>
+                @if(!$fromOwner)
+                    <div class="flex items-end gap-2">
+                        <div class="flex-1">
+                            <flux:select class="" wire:model="owner_id" label="{{ __('Propriétaire') }}"
+                                placeholder="{{ __('Sélectionner...') }}">
+                                <flux:select.option value="">{{ __('Aucun') }}</flux:select.option>
+                                @foreach (Owner::orderBy('last_name')->get() as $owner)
+                                    <flux:select.option value="{{ $owner->id }}">{{ $owner->full_name }}
+                                    </flux:select.option>
+                                @endforeach
+                            </flux:select>
                         </div>
-                    @else
-                        <div class="space-y-4 bg-zinc-50 p-4 rounded-xl border border-zinc-100">
-                            <div class="flex justify-between items-center mb-2">
-                                <h3 class="text-sm font-medium text-zinc-900">Nouveau propriétaire</h3>
-                                <button type="button" wire:click="toggleCreateOwner"
-                                    class="text-xs text-zinc-500 hover:text-zinc-700">
-                                    Annuler
-                                </button>
-                            </div>
 
-                            <div class="grid grid-cols-2 gap-4">
-                                <flux:input wire:model="newOwnerFirstName" label="Prénom" placeholder="Jean" />
-                                <flux:input wire:model="newOwnerLastName" label="Nom" placeholder="Dupont" />
-                            </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <flux:input wire:model="newOwnerEmail" type="email" label="Email" placeholder="Optionnel" />
-                                <flux:input wire:model="newOwnerPhone" label="Téléphone" placeholder="Optionnel" />
-                            </div>
-                        </div>
-                    @endif
+                        <flux:button variant="primary" wire:click="toggleCreateOwner" icon="plus"
+                            tooltip="Nouveau propriétaire" />
+                    </div>
+                @endif
+            </div>
+
+            <div class="space-y-4 pt-2 border-t border-zinc-100">
+                <flux:select wire:model.live="transaction_type" label="Type de transaction">
+                    @foreach (TransactionType::cases() as $transaction_type_case)
+                        <flux:select.option value="{{ $transaction_type_case->value }}">
+                            {{ $transaction_type_case->label() }}
+                        </flux:select.option>
+                    @endforeach
+                </flux:select>
+            </div>
+
+            @if(PropertyType::tryFrom($type)?->isStandalone() && !$property)
+                <div class="space-y-4 pt-2 border-t border-zinc-100">
+                    <div class="grid grid-cols-2 gap-4">
+                        <flux:input wire:model="surface_area" type="number" step="0.01" label="Surface (m²) (Optionnel)" />
+
+                        @if($transaction_type === 'rental')
+                            <flux:input wire:model="rent_amount" type="number" step="0.01" label="Loyer attendu (Optionnel)"
+                                prefix="{{ config('app.currency', 'FCFA') }}" />
+                        @else
+                            <flux:input wire:model="sale_price" type="number" step="0.01" label="Prix de vente (Optionnel)"
+                                prefix="{{ config('app.currency', 'FCFA') }}" />
+                        @endif
+                    </div>
+
+                    <flux:textarea wire:model="notes" label="Notes (Optionnel)" rows="2"
+                        placeholder="Informations complémentaires..." />
                 </div>
             @endif
+
+            <div class="space-y-3 pt-4 border-t border-zinc-100">
+                <flux:label>
+                    {{ PropertyType::tryFrom($type)?->isStandalone() ? 'Commodités' : 'Commodités Communes (Immeuble)' }}
+                </flux:label>
+                <div class="grid grid-cols-2 gap-2">
+                    @foreach(PropertyAmenity::cases() as $amenity)
+                        <flux:checkbox wire:model="amenities" :value="$amenity->value" :label="$amenity->label()" />
+                    @endforeach
+                </div>
+            </div>
+
         </div>
 
         <div class="flex justify-end gap-2 pt-2">

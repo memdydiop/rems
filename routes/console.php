@@ -30,3 +30,8 @@ Schedule::command('pms:send-overdue-relance --days=30')
     ->dailyAt('10:00')
     ->description('Send urgent notice for 30-day overdue payments');
 
+// Generate missing monthly rents
+Schedule::command('pms:generate-monthly-rent')
+    ->monthlyOn(1, '01:00')
+    ->description('Generate pending rent payments for all active leases for the current month');
+

@@ -9,6 +9,8 @@ enum PropertyType: string
     case Villa = 'villa';
     case House = 'house';
     case Compound = 'compound';
+    case HousingEstate = 'housing_estate';
+    case Residence = 'residence';
 
     // Commercial
     case CommercialBuilding = 'commercial_building';
@@ -32,7 +34,9 @@ enum PropertyType: string
             self::ResidentialBuilding => 'Immeuble résidentiel',
             self::Villa => 'Villa',
             self::House => 'Maison',
-            self::Compound => 'Concession',
+            self::Compound => 'Cour commune',
+            self::HousingEstate => 'Cité',
+            self::Residence => 'Résidence',
             self::CommercialBuilding => 'Immeuble commercial',
             self::ShoppingCenter => 'Centre commercial',
             self::Hotel => 'Hôtel',
@@ -47,11 +51,42 @@ enum PropertyType: string
     public function color(): string
     {
         return match ($this) {
-            self::ResidentialBuilding, self::Villa, self::House, self::Compound => 'blue',
+            self::ResidentialBuilding, self::Villa, self::House, self::Compound, self::HousingEstate, self::Residence => 'blue',
             self::CommercialBuilding, self::ShoppingCenter, self::Hotel => 'orange',
             self::MixedUse => 'violet',
             self::Warehouse, self::Factory, self::IndustrialComplex => 'zinc',
             self::Land => 'green',
         };
+    }
+
+    public function hasSubUnits(): bool
+    {
+        return match ($this) {
+            self::ResidentialBuilding,
+            self::CommercialBuilding,
+            self::ShoppingCenter,
+            self::MixedUse,
+            self::Compound,
+            self::HousingEstate,
+            self::Residence,
+            self::Hotel => true,
+            default => false,
+        };
+    }
+
+    public function category(): string
+    {
+        return match ($this) {
+            self::ResidentialBuilding, self::Villa, self::House, self::Compound, self::HousingEstate, self::Residence => 'residential',
+            self::CommercialBuilding, self::ShoppingCenter, self::Hotel => 'commercial',
+            self::MixedUse => 'mixed',
+            self::Warehouse, self::Factory, self::IndustrialComplex => 'industrial',
+            self::Land => 'land',
+        };
+    }
+
+    public function isStandalone(): bool
+    {
+        return !$this->hasSubUnits();
     }
 }

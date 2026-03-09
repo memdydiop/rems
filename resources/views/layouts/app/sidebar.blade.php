@@ -94,10 +94,10 @@
                     </flux:sidebar.item>
                 </flux:sidebar.group>
 
-                <flux:sidebar.group :heading="__('Gestion Locative')" class="grid">
-                    <flux:sidebar.item icon="users" :href="route('tenant.renters.index')"
-                        :current="request()->routeIs('tenant.renters.*')" wire:navigate>
-                        {{ __('Locataires') }}
+                <flux:sidebar.group :heading="__('Gestion des Clients')" class="grid">
+                    <flux:sidebar.item icon="users" :href="route('tenant.clients.index')"
+                        :current="request()->routeIs('tenant.clients.*')" wire:navigate>
+                        {{ __('Clients') }}
                     </flux:sidebar.item>
                     <flux:sidebar.item icon="document-text" :href="route('tenant.leases.index')"
                         :current="request()->routeIs('tenant.leases.*')" wire:navigate>
@@ -194,9 +194,9 @@
                                 :initials="auth()->user()->initials()" />
                             <div class="flex flex-col">
                                 <span
-                                    class="text-sm font-medium text-zinc-900 truncate max-w-[150px]">{{ auth()->user()->name }}</span>
+                                    class="text-sm font-medium text-zinc-900 truncate max-w-37.5">{{ auth()->user()->name }}</span>
                                 <span
-                                    class="text-xs text-zinc-500 truncate max-w-[150px]">{{ auth()->user()->email }}</span>
+                                    class="text-xs text-zinc-500 truncate max-w-37.5">{{ auth()->user()->email }}</span>
                             </div>
                         </div>
                     </div>

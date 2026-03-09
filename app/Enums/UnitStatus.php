@@ -6,12 +6,14 @@ enum UnitStatus: string
 {
     case Vacant = 'vacant';
     case Occupied = 'occupied';
+    case Sold = 'sold';
 
     public function label(): string
     {
         return match ($this) {
             self::Vacant => 'Vacant',
             self::Occupied => 'Occupé',
+            self::Sold => 'Vendu',
         };
     }
 
@@ -20,6 +22,7 @@ enum UnitStatus: string
         return match ($this) {
             self::Vacant => 'zinc',
             self::Occupied => 'green',
+            self::Sold => 'indigo',
         };
     }
 }

@@ -12,7 +12,7 @@ use Stancl\Tenancy\Facades\Tenancy;
 class SendRentReminders extends Command
 {
     protected $signature = 'pms:send-rent-reminders {--days=5 : Days before due date to send reminder}';
-    protected $description = 'Send rent payment reminder notifications to renters';
+    protected $description = 'Send rent payment reminder notifications to clients';
 
     public function handle(): int
     {
@@ -25,13 +25,13 @@ class SendRentReminders extends Command
 
             try {
                 $leases = Lease::where('status', LeaseStatus::Active)
-                    ->with(['renter', 'unit.property'])
+                    ->with(['client', 'unit.property'])
                     ->get();
 
                 foreach ($leases as $lease) {
-                    $renter = $lease->renter;
+                    $client = $lease->client;
 
-                    if (!$renter || !$renter->email) {
+                    if (!$client || !$client->email) {
                         continue;
                     }
 
@@ -45,9 +45,9 @@ class SendRentReminders extends Command
 
                     // Send reminder if due date is in X days
                     if ($nextDueDate->diffInDays(now()) === $days) {
-                        $renter->notify(new RentReminderNotification($lease, $days));
+                        $client->notify(new RentReminderNotification($lease, $days));
                         $totalSent++;
-                        $this->info("Sent reminder to {$renter->email} for {$lease->unit?->name}");
+                        $this->info("Sent reminder to {$client->email} for {$lease->unit?->name}");
                     }
                 }
             } finally {

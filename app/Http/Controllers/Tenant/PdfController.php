@@ -15,7 +15,7 @@ class PdfController extends Controller
      */
     public function leaseContract(Lease $lease): Response
     {
-        $lease->load(['renter', 'unit.property']);
+        $lease->load(['client', 'unit.property']);
 
         $unit = $lease->unit;
         $property = $unit->property;
@@ -36,17 +36,17 @@ class PdfController extends Controller
      */
     public function paymentReceipt(RentPayment $payment): Response
     {
-        $payment->load(['lease.renter', 'lease.unit.property']);
+        $payment->load(['lease.client', 'lease.unit.property']);
 
         $lease = $payment->lease;
-        $renter = $lease->renter;
+        $client = $lease->client;
         $unit = $lease->unit;
         $property = $unit->property;
 
         $pdf = Pdf::loadView('pdf.payment-receipt', [
             'payment' => $payment,
             'lease' => $lease,
-            'renter' => $renter,
+            'client' => $client,
             'unit' => $unit,
             'property' => $property,
         ]);
@@ -61,17 +61,17 @@ class PdfController extends Controller
      */
     public function rentReceipt(RentPayment $payment): Response
     {
-        $payment->load(['lease.renter', 'lease.unit.property']);
+        $payment->load(['lease.client', 'lease.unit.property']);
 
         $lease = $payment->lease;
-        $renter = $lease->renter;
+        $client = $lease->client;
         $unit = $lease->unit;
         $property = $unit->property;
 
         $pdf = Pdf::loadView('pdf.rent-receipt', [
             'payment' => $payment,
             'lease' => $lease,
-            'renter' => $renter,
+            'client' => $client,
             'unit' => $unit,
             'property' => $property,
         ]);

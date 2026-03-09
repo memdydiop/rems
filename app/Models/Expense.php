@@ -8,12 +8,16 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Expense extends Model
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
+
+class Expense extends Model implements HasMedia
 {
-    use HasFactory, HasUuids, SoftDeletes;
+    use HasFactory, HasUuids, SoftDeletes, InteractsWithMedia;
 
     protected $fillable = [
         'property_id',
+        'unit_id',
         'vendor_id',
         'description',
         'amount',
@@ -21,6 +25,10 @@ class Expense extends Model
         'category',
         'receipt_path',
         'notes',
+        'status',
+        'is_recurring',
+        'frequency',
+        'next_due_date',
     ];
 
     protected $casts = [
@@ -31,6 +39,11 @@ class Expense extends Model
     public function property()
     {
         return $this->belongsTo(Property::class);
+    }
+
+    public function unit()
+    {
+        return $this->belongsTo(Unit::class);
     }
 
     public function vendor()

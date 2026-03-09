@@ -56,6 +56,7 @@ new #[Layout('layouts.app', ['title' => 'Propriétaires'])] class extends Compon
 
 <div class="flex flex-col gap-6">
     <x-layouts::content heading="Propriétaires" subheading="Gestion des propriétaires (mandants).">
+        
         <x-slot:actions>
             <flux:button variant="primary" icon="plus" wire:click="$dispatch('open-modal', { name: 'create-owner' })">
                 Ajouter

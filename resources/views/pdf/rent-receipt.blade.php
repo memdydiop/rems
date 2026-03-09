@@ -226,11 +226,11 @@
                 <td class="party-spacer"></td>
                 <td class="party-col">
                     <div class="party-box">
-                        <div class="party-label">Locataire</div>
-                        <div class="party-name">{{ $renter->first_name }} {{ $renter->last_name }}</div>
-                        <div class="party-detail">{{ $renter->email }}</div>
-                        @if($renter->phone)
-                            <div class="party-detail">{{ $renter->phone }}</div>
+                        <div class="party-label">Client</div>
+                        <div class="party-name">{{ $client->first_name }} {{ $client->last_name }}</div>
+                        <div class="party-detail">{{ $client->email }}</div>
+                        @if($client->phone)
+                            <div class="party-detail">{{ $client->phone }}</div>
                         @endif
                     </div>
                 </td>
@@ -275,8 +275,8 @@
         <div class="attestation">
             <div class="attestation-title">Attestation de paiement</div>
             <p>
-                Je soussigné(e), atteste avoir reçu de <strong>{{ $renter->first_name }}
-                    {{ $renter->last_name }}</strong>
+                Je soussigné(e), atteste avoir reçu de <strong>{{ $client->first_name }}
+                    {{ $client->last_name }}</strong>
                 la somme de <strong>{{ number_format($payment->amount, 0, ',', ' ') }} XOF</strong>
                 au titre du loyer de l'unité <strong>{{ $unit->name }}</strong>
                 située à <strong>{{ $property->address }}</strong>

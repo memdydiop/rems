@@ -26,17 +26,25 @@ new
     public $unitId = null;
     public $name = '';
     public $property_id = '';
-    public $type = ''; // Added type
+    public $type = '';
+    public $transaction_type = 'rental';
+    public $sale_price = null;
+    public $surface_area = null;
+    public $notes = '';
+    public $amenities = [];
 
     // Modal State
     public $modalOpen = false;
-
     public function rules()
     {
         return [
             'name' => 'required|string|max:255',
             'property_id' => 'required|exists:properties,id',
             'type' => 'required|string',
+            'transaction_type' => 'required|string',
+            'sale_price' => 'required_if:transaction_type,sale|nullable|numeric|min:0',
+            'surface_area' => 'nullable|numeric|min:0',
+            'notes' => 'nullable|string',
         ];
     }
 
@@ -46,6 +54,8 @@ new
             'name.required' => 'Le nom est obligatoire.',
             'property_id.required' => 'La propriété est obligatoire.',
             'type.required' => 'Le type est obligatoire.',
+            'transaction_type.required' => 'Le type de transaction est obligatoire.',
+            'sale_price.required_if' => 'Le prix de vente est obligatoire pour une vente.',
         ];
     }
 
@@ -109,7 +119,7 @@ new
     #[Computed]
     public function properties()
     {
-        return Property::orderBy('name')->get();
+        return Property::orderBy('name')->get(); // This will exclude soft-deleted by default
     }
 
     public function sortBy($col)
@@ -134,6 +144,10 @@ new
         $this->name = $unit->name;
         $this->property_id = $unit->property_id;
         $this->type = $unit->type->value;
+        $this->transaction_type = $unit->transaction_type->value;
+        $this->sale_price = $unit->sale_price;
+        $this->surface_area = $unit->surface_area;
+        $this->notes = $unit->notes;
         $this->modalOpen = true;
     }
 
@@ -141,20 +155,22 @@ new
     {
         $this->validate();
 
+        $data = [
+            'name' => $this->name,
+            'property_id' => $this->property_id,
+            'type' => $this->type,
+            'transaction_type' => $this->transaction_type,
+            'sale_price' => $this->transaction_type === 'sale' ? $this->sale_price : null,
+            'surface_area' => $this->surface_area ?: null,
+            'notes' => $this->notes ?: null,
+        ];
+
         if ($this->unitId) {
             $unit = Unit::find($this->unitId);
-            $unit->update([
-                'name' => $this->name,
-                'property_id' => $this->property_id,
-                'type' => $this->type,
-            ]);
+            $unit->update($data);
             Flux::toast('Unité mise à jour avec succès.', 'success');
         } else {
-            Unit::create([
-                'name' => $this->name,
-                'property_id' => $this->property_id,
-                'type' => $this->type,
-            ]);
+            Unit::create($data);
             Flux::toast('Unité créée avec succès.', 'success');
         }
 
@@ -171,9 +187,19 @@ new
         }
     }
 
+    public function updatedPropertyId($value)
+    {
+        if ($value && $value !== 'all') {
+            $property = Property::find($value);
+            if ($property && $property->transaction_type) {
+                $this->transaction_type = $property->transaction_type->value;
+            }
+        }
+    }
+
     public function resetForm()
     {
-        $this->reset(['unitId', 'name', 'property_id', 'type']);
+        $this->reset(['unitId', 'name', 'property_id', 'type', 'transaction_type', 'sale_price', 'surface_area', 'notes', 'amenities']);
     }
 };
 ?>
@@ -183,7 +209,7 @@ new
         
         <x-slot:actions>
             <flux:button variant="primary" icon="plus" wire:click="create">
-                Nouveau Lot
+                Ajouter Unité
             </flux:button>
         </x-slot:actions>
 
@@ -256,7 +282,12 @@ new
                             </x-flux::table.cell>
 
                             <x-flux::table.cell>
-                                <flux:badge color="zinc" size="sm" icon="home">{{ $unit->property->name }}</flux:badge>
+                                <flux:badge color="zinc" size="sm" icon="home">
+                                    {{ $unit->property?->name ?? 'N/A' }}
+                                    @if($unit->property?->trashed())
+                                        <span class="text-rose-500 text-2xs font-normal ml-1">(Supprimé)</span>
+                                    @endif
+                                </flux:badge>
                             </x-flux::table.cell>
 
                             <x-flux::table.cell>
@@ -303,10 +334,10 @@ new
     </x-layouts::content>
 
     <!-- Create/Edit Modal -->
-    <flux:modal wire:model="modalOpen" class="md:w-96">
+    <flux:modal wire:model="modalOpen" class="min-w-100">
         <div class="space-y-6">
             <div>
-                <flux:heading size="lg">{{ $unitId ? 'Modifier l\'unité' : 'Nouveau Lot' }}</flux:heading>
+                <flux:heading size="lg">{{ $unitId ? 'Modifier l\'unité' : 'Ajouter Unité' }}</flux:heading>
                 <flux:subheading>Remplissez les informations ci-dessous.</flux:subheading>
             </div>
 
@@ -317,37 +348,55 @@ new
                     @endforeach
                 </flux:select>
 
-                <flux:input wire:model="name" label="Nom du lot" placeholder="Ex: Appartement A1, Bureau 204" />
+                <flux:input wire:model="name" label="Nom de l'unité" placeholder="Ex: Appt 4B" />
 
-                <flux:select wire:model="type" label="{{ __('Type') }}" placeholder="Choisir un type...">
-                    <flux:select.option value="" disabled>Sélectionner</flux:select.option>
+                <div class="grid grid-cols-2 gap-4">
+                    <flux:select wire:model.live="transaction_type" label="Type de transaction">
+                        @foreach (\App\Enums\TransactionType::cases() as $transactionType)
+                            <flux:select.option value="{{ $transactionType->value }}">{{ $transactionType->label() }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+
+                    <flux:select wire:model="type" label="{{ __('Type d\'unité') }}" placeholder="Choisir...">
+                        <flux:select.option value="" disabled>Sélectionner</flux:select.option>
+                        
+                        <optgroup label="Résidentiel">
+                            @foreach (UnitType::cases() as $type)
+                                @if(in_array($type->value, ['studio', 'apartment', 'room', 'entire_house']))
+                                    <flux:select.option value="{{ $type->value }}">{{ $type->label() }}</flux:select.option>
+                                @endif
+                            @endforeach
+                        </optgroup>
+
+                        <optgroup label="Commercial">
+                            @foreach (UnitType::cases() as $type)
+                                @if(in_array($type->value, ['office', 'retail', 'restaurant', 'storage']))
+                                    <flux:select.option value="{{ $type->value }}">{{ $type->label() }}</flux:select.option>
+                                @endif
+                            @endforeach
+                        </optgroup>
+
+                        <optgroup label="Autre">
+                            @foreach (UnitType::cases() as $type)
+                                @if(in_array($type->value, ['parking', 'garage', 'land']))
+                                    <flux:select.option value="{{ $type->value }}">{{ $type->label() }}</flux:select.option>
+                                @endif
+                            @endforeach
+                        </optgroup>
+                    </flux:select>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <flux:input wire:model="surface_area" type="number" step="0.01" label="Surface (m²) (Optionnel)" />
                     
-                    <optgroup label="Résidentiel">
-                        @foreach (UnitType::cases() as $type)
-                            @if(in_array($type->value, ['studio', 'f1', 'f2', 'f3', 'f4', 'f5_plus', 'room', 'entire_house']))
-                                <flux:select.option value="{{ $type->value }}">{{ $type->label() }}</flux:select.option>
-                            @endif
-                        @endforeach
-                    </optgroup>
+                    @if($transaction_type === 'sale')
+                        <flux:input wire:model="sale_price" type="number" step="0.01" label="Prix de vente"
+                            prefix="{{ config('app.currency', 'FCFA') }}" />
+                    @endif
+                </div>
 
-                    <optgroup label="Commercial">
-                        @foreach (UnitType::cases() as $type)
-                            @if(in_array($type->value, ['office', 'retail', 'restaurant', 'storage']))
-                                <flux:select.option value="{{ $type->value }}">{{ $type->label() }}</flux:select.option>
-                            @endif
-                        @endforeach
-                    </optgroup>
-
-                    <optgroup label="Autre">
-                        @foreach (UnitType::cases() as $type)
-                            @if(in_array($type->value, ['parking', 'garage', 'land']))
-                                <flux:select.option value="{{ $type->value }}">{{ $type->label() }}</flux:select.option>
-                            @endif
-                        @endforeach
-                    </optgroup>
-                </flux:select>
-
-                <flux:input wire:model="name" label="Nom du lot" placeholder="Ex: Appartement A1, Bureau 204" />
+                <flux:textarea wire:model="notes" label="Notes (Optionnel)" rows="2"
+                    placeholder="Informations complémentaires..." />
 
                 <div class="flex justify-end gap-2">
                     <flux:modal.close>

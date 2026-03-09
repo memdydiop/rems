@@ -170,7 +170,7 @@ new #[Layout('layouts.app', ['title' => 'Maintenance'])] class extends Component
 
 <div>
     <x-layouts::content heading="Maintenance (Privatif)"
-        subheading="Gérez les tickets liés aux unités privatives des locataires.">
+        subheading="Gérez les tickets liés aux unités privatives des clients.">
         <x-slot name="actions">
             <flux:button variant="primary" icon="plus"
                 wire:click="$dispatch('open-modal', { name: 'unit-create-maintenance' })">
@@ -221,7 +221,10 @@ new #[Layout('layouts.app', ['title' => 'Maintenance'])] class extends Component
                             <x-flux::table.cell>
                                 <div class="flex flex-col">
                                     <span class="text-sm text-zinc-900 font-medium">
-                                        {{ $request->property->name ?? 'N/A' }}
+                                        {{ $request->property?->name ?? 'N/A' }}
+                                        @if($request->property?->trashed())
+                                            <span class="text-rose-500 text-2xs">(Supprimé)</span>
+                                        @endif
                                     </span>
                                     <span class="text-xs text-zinc-500">{{ $request->unit->name ?? '—' }}</span>
                                 </div>
@@ -326,7 +329,7 @@ new #[Layout('layouts.app', ['title' => 'Maintenance'])] class extends Component
                                     <!-- Dot -->
                                     <div class="shrink-0 mt-1">
                                         <div class="size-2.5 rounded-full ring-4 ring-white
-                                                                                                                                                    {{ match ($activity['event']) {
+                                                                                                                                                                                    {{ match ($activity['event']) {
                             'created' => 'bg-emerald-500',
                             'updated' => 'bg-blue-500',
                             'deleted' => 'bg-red-500',

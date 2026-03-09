@@ -55,10 +55,17 @@ new
 
         // Get payments in date range
         $payments = \App\Models\RentPayment::whereBetween('paid_at', [$start, $end])
-            ->where('status', 'completed')
+            ->where('status', \App\Enums\PaymentStatus::Completed)
             ->get();
 
         $totalCollected = $payments->sum('amount');
+
+        // Get expenses in date range
+        $expenses = \App\Models\Expense::whereBetween('date', [$start, $end])
+            ->where('status', 'paid')
+            ->get();
+
+        $totalExpenses = $expenses->sum('amount');
 
         // Expected revenue from active leases
         $activeLeases = \App\Models\Lease::where('status', 'active')->get();
@@ -70,8 +77,10 @@ new
         $collectionRate = $totalExpected > 0 ? round(($totalCollected / $totalExpected) * 100) : 0;
 
         return [
-            'collected' => $totalCollected,
-            'expected' => $totalExpected,
+            'collected' => (float) $totalCollected,
+            'expected' => (float) $totalExpected,
+            'expenses' => (float) $totalExpenses,
+            'net' => (float) ($totalCollected - $totalExpenses),
             'pending' => max(0, $totalExpected - $totalCollected),
             'rate' => $collectionRate,
             'paymentsCount' => $payments->count(),
@@ -92,12 +101,18 @@ new
             $monthEnd = $current->copy()->endOfMonth();
 
             $collected = \App\Models\RentPayment::whereBetween('paid_at', [$monthStart, $monthEnd])
-                ->where('status', 'completed')
+                ->where('status', \App\Enums\PaymentStatus::Completed)
+                ->sum('amount');
+
+            $monthExpenses = \App\Models\Expense::whereBetween('date', [$monthStart, $monthEnd])
+                ->where('status', 'paid')
                 ->sum('amount');
 
             $months[] = [
                 'month' => $current->translatedFormat('F Y'),
-                'collected' => $collected,
+                'collected' => (float) $collected,
+                'expenses' => (float) $monthExpenses,
+                'net' => (float) ($collected - $monthExpenses),
             ];
 
             $current->addMonth();
@@ -109,7 +124,10 @@ new
     #[Computed]
     public function chartData()
     {
-        return collect($this->monthlyBreakdown)->pluck('collected')->values()->toArray();
+        return [
+            'collected' => collect($this->monthlyBreakdown)->pluck('collected')->values()->toArray(),
+            'expenses' => collect($this->monthlyBreakdown)->pluck('expenses')->values()->toArray(),
+        ];
     }
 
     #[Computed]
@@ -159,41 +177,52 @@ new
         </div>
 
         <!-- Summary Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
             <x-flux::card class="bg-emerald-50 border-emerald-200">
                 <div class="p-4 text-center">
-                    <p class="text-3xl font-bold text-emerald-700">
-                        {{ \Illuminate\Support\Number::currency($this->revenueData['collected'], 'USD') }}
+                    <p class="text-2xl font-bold text-emerald-700">
+                        {{ \Illuminate\Support\Number::currency($this->revenueData['collected'], 'XOF') }}
                     </p>
-                    <p class="text-sm text-emerald-600">Collectés</p>
-                </div>
-            </x-flux::card>
-
-            <x-flux::card class="bg-blue-50 border-blue-200">
-                <div class="p-4 text-center">
-                    <p class="text-3xl font-bold text-blue-700">
-                        {{ \Illuminate\Support\Number::currency($this->revenueData['expected'], 'USD') }}
-                    </p>
-                    <p class="text-sm text-blue-600">Attendus</p>
+                    <p class="text-xs text-emerald-600">Revenus Collectés</p>
                 </div>
             </x-flux::card>
 
             <x-flux::card class="bg-rose-50 border-rose-200">
                 <div class="p-4 text-center">
-                    <p class="text-3xl font-bold text-rose-700">
-                        {{ \Illuminate\Support\Number::currency($this->revenueData['pending'], 'USD') }}
+                    <p class="text-2xl font-bold text-rose-700">
+                        {{ \Illuminate\Support\Number::currency($this->revenueData['expenses'], 'XOF') }}
                     </p>
-                    <p class="text-sm text-rose-600">En Attente</p>
+                    <p class="text-xs text-rose-600">Dépenses Payées</p>
+                </div>
+            </x-flux::card>
+
+            <x-flux::card class="bg-indigo-50 border-indigo-200">
+                <div class="p-4 text-center">
+                    <p class="text-2xl font-bold text-indigo-700">
+                        {{ \Illuminate\Support\Number::currency($this->revenueData['net'], 'XOF') }}
+                    </p>
+                    <p class="text-xs text-indigo-600 font-semibold">Bénefice Net</p>
+                </div>
+            </x-flux::card>
+
+            <x-flux::card class="bg-blue-50 border-blue-200">
+                <div class="p-4 text-center">
+                    <p class="text-2xl font-bold text-blue-700">
+                        {{ \Illuminate\Support\Number::currency($this->revenueData['expected'], 'XOF') }}
+                    </p>
+                    <p class="text-xs text-blue-600 font-medium">Attendus (Baux)</p>
                 </div>
             </x-flux::card>
 
             <x-flux::card class="bg-amber-50 border-amber-200">
                 <div class="p-4 text-center">
-                    <p class="text-3xl font-bold text-amber-700">{{ $this->revenueData['rate'] }}%</p>
-                    <p class="text-sm text-amber-600">Taux de Collecte</p>
+                    <p class="text-2xl font-bold text-amber-700">{{ $this->revenueData['rate'] }}%</p>
+                    <p class="text-xs text-amber-600">Taux de Collecte</p>
                 </div>
             </x-flux::card>
         </div>
+
+        <!-- Chart -->
 
         <!-- Chart -->
         <x-flux::card class="mb-6">
@@ -201,9 +230,12 @@ new
             <div class="p-4 h-80" x-data="{
                 init() {
                     const options = {
-                        series: [{ name: 'Revenus', data: {{ json_encode($this->chartData) }} }],
-                        chart: { type: 'bar', height: 300, toolbar: { show: false } },
-                        plotOptions: { bar: { borderRadius: 6, columnWidth: '60%' } },
+                        series: [
+                            { name: 'Revenus', data: {{ json_encode($this->chartData['collected']) }} },
+                            { name: 'Dépenses', data: {{ json_encode($this->chartData['expenses']) }} }
+                        ],
+                        chart: { type: 'bar', height: 300, toolbar: { show: false }, stacked: false },
+                        plotOptions: { bar: { borderRadius: 4, columnWidth: '55%' } },
                         dataLabels: { enabled: false },
                         xaxis: { 
                             categories: {{ Js::from($this->chartLabels) }},
@@ -211,11 +243,11 @@ new
                         },
                         yaxis: { 
                             labels: { 
-                                formatter: (val) => '$' + (val / 1000).toFixed(1) + 'k',
+                                formatter: (val) => new Intl.NumberFormat('fr-FR').format(val) + ' F',
                                 style: { colors: '#71717a' }
                             } 
                         },
-                        colors: ['#10b981'],
+                        colors: ['#10b981', '#ef4444'],
                         grid: { borderColor: '#f4f4f5' }
                     };
                     new ApexCharts(this.$el, options).render();
@@ -229,14 +261,23 @@ new
             <x-flux::table>
                 <x-flux::table.columns>
                     <x-flux::table.column>Mois</x-flux::table.column>
-                    <x-flux::table.column>Montant Collecté</x-flux::table.column>
+                    <x-flux::table.column>Collecté</x-flux::table.column>
+                    <x-flux::table.column>Dépenses</x-flux::table.column>
+                    <x-flux::table.column>Net</x-flux::table.column>
                 </x-flux::table.columns>
                 <x-flux::table.rows>
                     @foreach($this->monthlyBreakdown as $month)
                         <x-flux::table.row>
                             <x-flux::table.cell>{{ $month['month'] }}</x-flux::table.cell>
                             <x-flux::table.cell class="font-semibold text-emerald-600">
-                                {{ \Illuminate\Support\Number::currency($month['collected'], 'USD') }}
+                                {{ \Illuminate\Support\Number::currency($month['collected'], 'XOF') }}
+                            </x-flux::table.cell>
+                            <x-flux::table.cell class="text-red-500">
+                                {{ \Illuminate\Support\Number::currency($month['expenses'], 'XOF') }}
+                            </x-flux::table.cell>
+                            <x-flux::table.cell
+                                class="font-bold {{ $month['net'] >= 0 ? 'text-indigo-600' : 'text-red-600' }}">
+                                {{ \Illuminate\Support\Number::currency($month['net'], 'XOF') }}
                             </x-flux::table.cell>
                         </x-flux::table.row>
                     @endforeach

@@ -3,6 +3,7 @@
 namespace App\Livewire\Components;
 
 use Livewire\Component;
+use Livewire\Attributes\On;
 
 class OnboardingFlash extends Component
 {
@@ -17,6 +18,12 @@ class OnboardingFlash extends Component
     public bool $hasSeen = false;
 
     public function mount()
+    {
+        $this->refreshVisibility();
+    }
+
+    #[On('onboarding-step-seen')]
+    public function refreshVisibility()
     {
         if (!auth()->check()) {
             $this->hasSeen = true;
@@ -46,6 +53,8 @@ class OnboardingFlash extends Component
             auth()->user()->markOnboardingAsSeen($this->step);
         }
         $this->hasSeen = true;
+
+        $this->dispatch('onboarding-step-seen');
     }
 
     public function render()

@@ -29,6 +29,11 @@ class Owner extends Model
         'status' => OwnerStatus::class,
     ];
 
+    public function getFullNameAttribute(): string
+    {
+        return "{$this->first_name} {$this->last_name}";
+    }
+
     public function properties(): HasMany
     {
         return $this->hasMany(Property::class);

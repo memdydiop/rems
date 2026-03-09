@@ -1,7 +1,7 @@
 <?php
 use Livewire\Attributes\Layout;
 use Livewire\Component;
-use App\Models\{Property, Unit, Renter};
+use App\Models\{Property, Unit, Client};
 use App\Enums\{PropertyType};
 
 new #[Layout('layouts.guest', ['title' => 'Configuration Initiale'])] class extends Component {
@@ -18,15 +18,15 @@ new #[Layout('layouts.guest', ['title' => 'Configuration Initiale'])] class exte
     public string $unitName = '';
     public string $unitRent = '';
 
-    // Step 3: Renter (optional)
-    public string $renterFirstName = '';
-    public string $renterLastName = '';
-    public string $renterEmail = '';
-    public string $renterPhone = '';
+    // Step 3: Client (optional)
+    public string $clientFirstName = '';
+    public string $clientLastName = '';
+    public string $clientEmail = '';
+    public string $clientPhone = '';
 
     public ?Property $createdProperty = null;
     public ?Unit $createdUnit = null;
-    public ?Renter $createdRenter = null;
+    public ?Client $createdClient = null;
 
     public function nextStep()
     {
@@ -40,8 +40,8 @@ new #[Layout('layouts.guest', ['title' => 'Configuration Initiale'])] class exte
             } elseif ($this->currentStep === 2) {
                 $this->createUnit();
             } elseif ($this->currentStep === 3) {
-                if ($this->renterFirstName && $this->renterLastName) {
-                    $this->createRenter();
+                if ($this->clientFirstName && $this->clientLastName) {
+                    $this->createClient();
                 }
             }
         }
@@ -70,9 +70,9 @@ new #[Layout('layouts.guest', ['title' => 'Configuration Initiale'])] class exte
             1 => ['propertyName' => 'required|min:2', 'propertyAddress' => 'required'],
             2 => ['unitName' => 'required', 'unitRent' => 'required|numeric|min:0'],
             3 => [
-                'renterFirstName' => 'nullable|min:2',
-                'renterLastName' => 'required_with:renterFirstName',
-                'renterEmail' => 'nullable|email',
+                'clientFirstName' => 'nullable|min:2',
+                'clientLastName' => 'required_with:clientFirstName',
+                'clientEmail' => 'nullable|email',
             ],
             default => [],
         };
@@ -118,35 +118,35 @@ new #[Layout('layouts.guest', ['title' => 'Configuration Initiale'])] class exte
         }
     }
 
-    protected function createRenter()
+    protected function createClient()
     {
-        if ($this->createdRenter) {
-            $this->createdRenter->update([
-                'first_name' => $this->renterFirstName,
-                'last_name' => $this->renterLastName,
-                'email' => $this->renterEmail,
-                'phone' => $this->renterPhone,
+        if ($this->createdClient) {
+            $this->createdClient->update([
+                'first_name' => $this->clientFirstName,
+                'last_name' => $this->clientLastName,
+                'email' => $this->clientEmail,
+                'phone' => $this->clientPhone,
             ]);
         } else {
-            $this->createdRenter = Renter::create([
-                'first_name' => $this->renterFirstName,
-                'last_name' => $this->renterLastName,
-                'email' => $this->renterEmail,
-                'phone' => $this->renterPhone,
+            $this->createdClient = Client::create([
+                'first_name' => $this->clientFirstName,
+                'last_name' => $this->clientLastName,
+                'email' => $this->clientEmail,
+                'phone' => $this->clientPhone,
             ]);
         }
 
-        if ($this->createdUnit && $this->createdRenter) {
+        if ($this->createdUnit && $this->createdClient) {
             // Check if active lease already exists
             $existingLease = \App\Models\Lease::where('unit_id', $this->createdUnit->id)
-                ->where('renter_id', $this->createdRenter->id)
+                ->where('client_id', $this->createdClient->id)
                 ->where('status', 'active')
                 ->first();
 
             if (!$existingLease) {
                 \App\Models\Lease::create([
                     'unit_id' => $this->createdUnit->id,
-                    'renter_id' => $this->createdRenter->id,
+                    'client_id' => $this->createdClient->id,
                     'start_date' => now(),
                     'rent_amount' => $this->createdUnit->rent_amount,
                     'status' => 'active',
@@ -196,8 +196,7 @@ new #[Layout('layouts.guest', ['title' => 'Configuration Initiale'])] class exte
                 <div x-data="{ step: @entangle('currentStep') }" class="grid grid-cols-1">
 
                     <!-- Step 0: Welcome -->
-                    <div x-show="step === 0" 
-                        x-transition:enter="transition ease-out duration-300"
+                    <div x-show="step === 0" x-transition:enter="transition ease-out duration-300"
                         x-transition:enter-start="opacity-0 translate-x-4"
                         x-transition:enter-end="opacity-100 translate-x-0"
                         x-transition:leave="transition ease-in duration-200"
@@ -223,7 +222,7 @@ new #[Layout('layouts.guest', ['title' => 'Configuration Initiale'])] class exte
                                 <div class="bg-emerald-100 p-1.5 rounded-full text-emerald-600">
                                     <flux:icon name="home" class="size-4" />
                                 </div>
-                                Ajouter un locataire
+                                Ajouter un client
                             </li>
                             <li class="flex items-center gap-3">
                                 <div class="bg-amber-100 p-1.5 rounded-full text-amber-600">
@@ -235,14 +234,12 @@ new #[Layout('layouts.guest', ['title' => 'Configuration Initiale'])] class exte
                     </div>
 
                     <!-- Step 1: Property -->
-                    <div x-show="step === 1" 
-                        x-transition:enter="transition ease-out duration-300"
+                    <div x-show="step === 1" x-transition:enter="transition ease-out duration-300"
                         x-transition:enter-start="opacity-0 translate-x-4"
                         x-transition:enter-end="opacity-100 translate-x-0"
                         x-transition:leave="transition ease-in duration-200"
                         x-transition:leave-start="opacity-100 translate-x-0"
-                        x-transition:leave-end="opacity-0 -translate-x-4" 
-                        class="col-start-1 row-start-1">
+                        x-transition:leave-end="opacity-0 -translate-x-4" class="col-start-1 row-start-1">
                         <div class="text-center mb-8">
                             <div
                                 class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-blue-50 text-blue-600 mb-4 ring-1 ring-blue-100">
@@ -265,14 +262,12 @@ new #[Layout('layouts.guest', ['title' => 'Configuration Initiale'])] class exte
                     </div>
 
                     <!-- Step 2: Unit -->
-                    <div x-show="step === 2" x-cloak 
-                        x-transition:enter="transition ease-out duration-300"
+                    <div x-show="step === 2" x-cloak x-transition:enter="transition ease-out duration-300"
                         x-transition:enter-start="opacity-0 translate-x-4"
                         x-transition:enter-end="opacity-100 translate-x-0"
                         x-transition:leave="transition ease-in duration-200"
                         x-transition:leave-start="opacity-100 translate-x-0"
-                        x-transition:leave-end="opacity-0 -translate-x-4" 
-                        class="col-start-1 row-start-1">
+                        x-transition:leave-end="opacity-0 -translate-x-4" class="col-start-1 row-start-1">
                         <div class="text-center mb-8">
                             <div
                                 class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 mb-4 ring-1 ring-emerald-100">
@@ -288,40 +283,36 @@ new #[Layout('layouts.guest', ['title' => 'Configuration Initiale'])] class exte
                         </div>
                     </div>
 
-                    <!-- Step 3: Renter -->
-                    <div x-show="step === 3" x-cloak 
-                        x-transition:enter="transition ease-out duration-300"
+                    <!-- Step 3: Client -->
+                    <div x-show="step === 3" x-cloak x-transition:enter="transition ease-out duration-300"
                         x-transition:enter-start="opacity-0 translate-x-4"
                         x-transition:enter-end="opacity-100 translate-x-0"
                         x-transition:leave="transition ease-in duration-200"
                         x-transition:leave-start="opacity-100 translate-x-0"
-                        x-transition:leave-end="opacity-0 -translate-x-4" 
-                        class="col-start-1 row-start-1">
+                        x-transition:leave-end="opacity-0 -translate-x-4" class="col-start-1 row-start-1">
                         <div class="text-center mb-8">
                             <div
                                 class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-violet-50 text-violet-600 mb-4 ring-1 ring-violet-100">
                                 <flux:icon name="user-plus" class="w-6 h-6" />
                             </div>
-                            <h2 class="text-xl font-semibold text-zinc-900">Ajoutez un locataire</h2>
+                            <h2 class="text-xl font-semibold text-zinc-900">Ajoutez un client</h2>
                             <p class="text-sm text-zinc-500 mt-1">Optionnel, vous pourrez le faire plus tard.</p>
                         </div>
 
                         <div class="space-y-5">
                             <div class="grid grid-cols-2 gap-4">
-                                <flux:input label="Prénom" wire:model="renterFirstName" placeholder="Jean" />
-                                <flux:input label="Nom" wire:model="renterLastName" placeholder="Dupont" />
+                                <flux:input label="Prénom" wire:model="clientFirstName" placeholder="Jean" />
+                                <flux:input label="Nom" wire:model="clientLastName" placeholder="Dupont" />
                             </div>
-                            <flux:input type="email" label="Email" wire:model="renterEmail"
+                            <flux:input type="email" label="Email" wire:model="clientEmail"
                                 placeholder="jean@exemple.com" />
-                            <flux:input label="Téléphone" wire:model="renterPhone" placeholder="+225..." />
+                            <flux:input label="Téléphone" wire:model="clientPhone" placeholder="+225..." />
                         </div>
                     </div>
 
                     <!-- Step 4: Completion -->
-                    <div x-show="step === 4" x-cloak 
-                        x-transition:enter="transition ease-out duration-300"
-                        x-transition:enter-start="opacity-0 scale-95" 
-                        x-transition:enter-end="opacity-100 scale-100"
+                    <div x-show="step === 4" x-cloak x-transition:enter="transition ease-out duration-300"
+                        x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
                         class="col-start-1 row-start-1 flex flex-col items-center justify-center text-center">
                         <div
                             class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-50 text-green-600 mb-6 ring-4 ring-green-50">
@@ -365,12 +356,13 @@ new #[Layout('layouts.guest', ['title' => 'Configuration Initiale'])] class exte
                                             Unité</div>
                                         <div class="text-sm font-medium text-zinc-900">{{ $unitName }}</div>
                                         <div class="text-xs text-zinc-500">
-                                            {{ number_format((float) $unitRent, 0, ',', ' ') }} FCFA / mois</div>
+                                            {{ number_format((float) $unitRent, 0, ',', ' ') }} FCFA / mois
+                                        </div>
                                     </div>
                                 </div>
 
-                                <!-- Renter Info (Optional) -->
-                                @if($renterFirstName)
+                                <!-- Client Info (Optional) -->
+                                @if($clientFirstName)
                                     <div
                                         class="flex items-start gap-4 p-3 bg-white rounded-lg border border-zinc-100 ring-1 ring-zinc-50">
                                         <div class="mt-1 bg-violet-50 p-2 rounded-lg text-violet-600">
@@ -378,10 +370,11 @@ new #[Layout('layouts.guest', ['title' => 'Configuration Initiale'])] class exte
                                         </div>
                                         <div>
                                             <div class="text-2xs font-bold text-zinc-400 uppercase tracking-tighter mb-0.5">
-                                                Premier Locataire</div>
-                                            <div class="text-sm font-medium text-zinc-900">{{ $renterFirstName }}
-                                                {{ $renterLastName }}</div>
-                                            <div class="text-xs text-zinc-500">{{ $renterEmail ?: 'Pas d\'email' }}</div>
+                                                Premier Client</div>
+                                            <div class="text-sm font-medium text-zinc-900">{{ $clientFirstName }}
+                                                {{ $clientLastName }}
+                                            </div>
+                                            <div class="text-xs text-zinc-500">{{ $clientEmail ?: 'Pas d\'email' }}</div>
                                         </div>
                                     </div>
                                 @endif

@@ -38,7 +38,7 @@ class LeaseExpiringNotification extends Notification implements ShouldQueue
             ->line('Le bail suivant expire dans ' . $this->daysUntilExpiry . ' jours.')
             ->line('**Propriété:** ' . $property?->name)
             ->line('**Unité:** ' . $unit?->name)
-            ->line('**Locataire:** ' . $this->lease->renter?->first_name . ' ' . $this->lease->renter?->last_name)
+            ->line('**Client:** ' . $this->lease->client?->first_name . ' ' . $this->lease->client?->last_name)
             ->line('**Date d\'expiration:** ' . $this->lease->end_date->format('d/m/Y'))
             ->action('Gérer le bail', url('/leases'))
             ->line('Pensez à renouveler ou à préparer la fin du bail.');
@@ -50,7 +50,7 @@ class LeaseExpiringNotification extends Notification implements ShouldQueue
             'type' => 'lease_expiring',
             'lease_id' => $this->lease->id,
             'unit_name' => $this->lease->unit?->name,
-            'renter_name' => $this->lease->renter?->first_name . ' ' . $this->lease->renter?->last_name,
+            'client_name' => $this->lease->client?->first_name . ' ' . $this->lease->client?->last_name,
             'expiry_date' => $this->lease->end_date->format('Y-m-d'),
             'days_until_expiry' => $this->daysUntilExpiry,
             'message' => 'Bail expire dans ' . $this->daysUntilExpiry . ' jours',

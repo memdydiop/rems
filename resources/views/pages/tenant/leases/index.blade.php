@@ -4,6 +4,8 @@ use App\Models\Lease;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\LeasesExport;
 
 new #[Layout('layouts.app', ['title' => 'Baux'])] class extends Component {
     use WithPagination;
@@ -69,13 +71,38 @@ new #[Layout('layouts.app', ['title' => 'Baux'])] class extends Component {
         }
     }
 
+    public function sendWhatsAppReminder($id)
+    {
+        $lease = Lease::findOrFail($id);
+        $client = $lease->client;
+
+        if (!$client->phone) {
+            $this->js("Flux.toast('Le client n\'a pas de numéro de téléphone enregistré.', variant: 'danger')");
+            return;
+        }
+
+        // Calculate days overdue (assuming due on 1st of month)
+        $dueAt = now()->startOfMonth();
+        $daysOverdue = now()->diffInDays($dueAt);
+
+        $level = 'reminder';
+        if ($daysOverdue > 15)
+            $level = 'urgent';
+        elseif ($daysOverdue > 7)
+            $level = 'warning';
+
+        $client->notify(new \App\Notifications\OverduePaymentNotification($lease, $daysOverdue, $level));
+
+        $this->js("Flux.toast('Relance WhatsApp envoyée à {$client->full_name}.')");
+    }
+
     public function with()
     {
         return [
             'leases' => Lease::query()
-                ->with(['unit.property', 'renter'])
+                ->with(['unit.property', 'client'])
                 ->when($this->search, function ($q) {
-                    $q->whereHas('renter', fn($sub) => $sub->where('first_name', 'like', '%' . $this->search . '%')
+                    $q->whereHas('client', fn($sub) => $sub->where('first_name', 'like', '%' . $this->search . '%')
                         ->orWhere('last_name', 'like', '%' . $this->search . '%'))
                         ->orWhereHas('unit', fn($sub) => $sub->where('name', 'like', '%' . $this->search . '%'));
                 })
@@ -86,12 +113,19 @@ new #[Layout('layouts.app', ['title' => 'Baux'])] class extends Component {
             'totalRevenue' => Lease::where('status', 'active')->sum('rent_amount'),
         ];
     }
+    public function exportLeases()
+    {
+        return Excel::download(new LeasesExport, 'baux_' . now()->format('Y-m-d') . '.xlsx');
+    }
 };
 ?>
 
 <div>
     <x-layouts::content heading="Baux" subheading="Gérez vos contrats de location et revenus.">
         <x-slot:actions>
+            <flux:button icon="arrow-down-tray" variant="ghost" wire:click="exportLeases">
+                Exporter
+            </flux:button>
             <flux:button icon="plus" wire:click="$dispatch('open-modal', { name: 'create-lease' })">
                 Nouveau Bail
             </flux:button>
@@ -173,7 +207,7 @@ new #[Layout('layouts.app', ['title' => 'Baux'])] class extends Component {
 
             <x-flux::table :paginate="$leases" search linesPerPage>
                 <x-flux::table.columns>
-                    <x-flux::table.column>Locataire</x-flux::table.column>
+                    <x-flux::table.column>Client</x-flux::table.column>
                     <x-flux::table.column>Unité</x-flux::table.column>
                     <x-flux::table.column sortable :sorted="$sortCol === 'start_date'" :direction="$sortAsc ? 'asc' : 'desc'" wire:click="sortBy('start_date')">Période</x-flux::table.column>
                     <x-flux::table.column align="right" sortable :sorted="$sortCol === 'rent_amount'"
@@ -188,19 +222,24 @@ new #[Layout('layouts.app', ['title' => 'Baux'])] class extends Component {
                         <x-flux::table.row :key="$lease->id">
                             <x-flux::table.cell>
                                 <div class="flex items-center gap-3">
-                                    <flux:avatar size="sm" :name="$lease->renter->full_name"
+                                    <flux:avatar size="sm" :name="$lease->client->full_name"
                                         class="ring-2 ring-white shadow-sm" />
                                     <div class="flex flex-col">
-                                        <span class="font-medium text-zinc-900">{{ $lease->renter->full_name }}</span>
-                                        <span class="text-xs text-zinc-500">{{ $lease->renter->email }}</span>
+                                        <span class="font-medium text-zinc-900">{{ $lease->client->full_name }}</span>
+                                        <span class="text-xs text-zinc-500">{{ $lease->client->email }}</span>
                                     </div>
                                 </div>
                             </x-flux::table.cell>
                             <x-flux::table.cell>
                                 <a href="{{ route('tenant.units.show', $lease->unit) }}"
                                     class="text-sm text-zinc-900 font-medium hover:text-indigo-600 transition-colors">{{ $lease->unit->name }}</a>
-                                <a href="{{ route('tenant.properties.show', $lease->unit->property) }}"
-                                    class="text-xs text-zinc-500 hover:text-indigo-500 transition-colors">{{ $lease->unit->property->name }}</a>
+                                <a href="{{ route('tenant.properties.show', $lease->unit?->property) }}"
+                                    class="text-xs text-zinc-500 hover:text-indigo-500 transition-colors">
+                                    {{ $lease->unit?->property?->name ?? 'N/A' }}
+                                    @if($lease->unit?->property?->trashed())
+                                        <span class="text-rose-500 text-2xs">(Supprimé)</span>
+                                    @endif
+                                </a>
                             </x-flux::table.cell>
                             <x-flux::table.cell>
                                 <div class="text-sm text-zinc-600">{{ $lease->start_date->format('d M Y') }} -
@@ -223,7 +262,15 @@ new #[Layout('layouts.app', ['title' => 'Baux'])] class extends Component {
                                             wire:click="$dispatch('open-modal', { name: 'edit-lease', lease_id: '{{ $lease->id }}' })">
                                             Modifier</flux:menu.item>
                                         <flux:menu.separator />
+                                        <flux:menu.item icon="banknotes"
+                                            wire:click="$dispatch('record-payment', { lease_id: '{{ $lease->id }}' })">
+                                            Enregistrer un paiement</flux:menu.item>
+                                        <flux:menu.separator />
                                         @if($lease->status === 'active')
+                                            <flux:menu.item icon="chat-bubble-bottom-center-text"
+                                                wire:click="sendWhatsAppReminder('{{ $lease->id }}')">
+                                                Relance WhatsApp</flux:menu.item>
+                                            <flux:menu.separator />
                                             <flux:menu.item icon="x-circle" wire:click="terminate('{{ $lease->id }}')"
                                                 wire:confirm="Êtes-vous sûr de vouloir résilier ce bail ? Cette action libérera l'unité.">
                                                 Mettre fin au bail</flux:menu.item>
@@ -256,5 +303,6 @@ new #[Layout('layouts.app', ['title' => 'Baux'])] class extends Component {
 
     <livewire:pages::tenant.leases.modals.create />
     <livewire:pages::tenant.leases.modals.edit />
-    <livewire:pages::tenant.renters.modals.create />
+    <livewire:pages::tenant.clients.modals.create />
+    <livewire:pages::tenant.payments.modals.record-payment />
 </div>

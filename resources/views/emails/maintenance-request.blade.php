@@ -19,7 +19,7 @@
     </p>
     <p><strong>Propriété :</strong> {{ $request->unit->property->name }}</p>
     <p><strong>Unité :</strong> {{ $request->unit->name }}</p>
-    <p><strong>Locataire :</strong> {{ $request->renter->first_name }} {{ $request->renter->last_name }}</p>
+    <p><strong>Client :</strong> {{ $request->client->first_name }} {{ $request->client->last_name }}</p>
 </div>
 
 <p><strong>Description :</strong></p>

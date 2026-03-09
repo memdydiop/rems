@@ -72,7 +72,7 @@ class OverduePaymentNotification extends Notification implements ShouldQueue
         return [
             'type' => 'overdue_payment',
             'level' => $this->level,
-            'lease_id' => $this->lease->id,
+            'client_id' => $this->lease->id,
             'days_overdue' => $this->daysOverdue,
             'amount' => $this->lease->rent_amount,
             'message' => match ($this->level) {

@@ -150,7 +150,7 @@
         <thead>
             <tr>
                 <th width="40%">Propriété / Unité</th>
-                <th width="20%">Locataire</th>
+                <th width="20%">Client</th>
                 <th width="20%" class="text-right">Revenus</th>
                 <th width="20%" class="text-right">Commissions ({{ $commissionRate }}%)</th>
             </tr>
@@ -163,7 +163,7 @@
                         <div style="font-size: 10px; color: #666;">{{ $detail['unit_name'] }}</div>
                         <div style="font-size: 10px; color: #999;">{{ $detail['address'] }}</div>
                     </td>
-                    <td>{{ $detail['renter_name'] }}</td>
+                    <td>{{ $detail['client_name'] }}</td>
                     <td class="text-right">{{ number_format($detail['rent_collected'], 0, ',', ' ') }}</td>
                     <td class="text-right text-red-600">- {{ number_format($detail['commission'], 0, ',', ' ') }}</td>
                 </tr>

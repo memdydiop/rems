@@ -4,7 +4,7 @@ namespace App\Livewire;
 
 use Livewire\Component;
 use App\Models\Property;
-use App\Models\Renter;
+use App\Models\Client;
 use App\Models\Lease;
 use App\Models\Expense;
 use App\Models\MaintenanceRequest;
@@ -46,7 +46,7 @@ class GlobalSearch extends Component
                     'type' => 'Propriété'
                 ]),
 
-            'renters' => Renter::where('first_name', 'like', $query)
+            'clients' => Client::where('first_name', 'like', $query)
                 ->orWhere('last_name', 'like', $query)
                 ->orWhere('email', 'like', $query)
                 ->limit(3)
@@ -56,12 +56,12 @@ class GlobalSearch extends Component
                     'title' => $item->first_name . ' ' . $item->last_name,
                     'subtitle' => $item->email,
                     'icon' => 'user',
-                    'url' => route('tenant.renters.index') . '?renter=' . $item->id,
-                    'type' => 'Locataire'
+                    'url' => route('tenant.clients.index') . '?client=' . $item->id,
+                    'type' => 'Client'
                 ]),
 
-            'leases' => Lease::with(['renter', 'unit.property'])
-                ->whereHas('renter', function ($q) use ($query) {
+            'leases' => Lease::with(['client', 'unit.property'])
+                ->whereHas('client', function ($q) use ($query) {
                     $q->where('first_name', 'like', $query)
                         ->orWhere('last_name', 'like', $query);
                 })
@@ -72,7 +72,7 @@ class GlobalSearch extends Component
                 ->get()
                 ->map(fn($item) => [
                     'id' => $item->id,
-                    'title' => $item->renter->first_name . ' ' . $item->renter->last_name,
+                    'title' => $item->client->first_name . ' ' . $item->client->last_name,
                     'subtitle' => $item->unit->property->name . ' - ' . $item->unit->name,
                     'icon' => 'document-text',
                     'url' => route('tenant.leases.index') . '?lease=' . $item->id,
@@ -86,7 +86,7 @@ class GlobalSearch extends Component
                 ->map(fn($item) => [
                     'id' => $item->id,
                     'title' => $item->title,
-                    'subtitle' => 'Statut: ' . ucfirst($item->status),
+                    'subtitle' => 'Statut: ' . ucfirst($item->status->value),
                     'icon' => 'wrench-screwdriver',
                     'url' => route('tenant.maintenance.index') . '?maintenance=' . $item->id,
                     'type' => 'Maintenance'

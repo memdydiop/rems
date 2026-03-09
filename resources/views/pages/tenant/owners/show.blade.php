@@ -282,4 +282,5 @@ new #[Layout('layouts.app', ['title' => 'Propriétaire'])] class extends Compone
     </x-layouts::content>
 
     <livewire:pages::tenant.properties.modals.create />
+    <livewire:pages::tenant.owners.modals.create />
 </div>

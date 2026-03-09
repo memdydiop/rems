@@ -2,12 +2,15 @@
 
 use App\Models\Lease;
 use App\Models\Unit;
-use App\Models\Renter;
+use App\Models\Client;
+use App\Enums\LeaseType;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 new class extends Component {
+    use WithFileUploads;
     public ?Lease $lease = null;
 
     #[On('open-modal')]
@@ -21,28 +24,50 @@ new class extends Component {
         if (!$id)
             return;
 
-        $this->lease = Lease::with('unit.property', 'renter')->findOrFail($id);
+        $this->lease = Lease::with('unit.property', 'client')->findOrFail($id);
 
         $this->unit_id = $this->lease->unit_id;
-        $this->renter_id = $this->lease->renter_id;
+        $this->client_id = $this->lease->client_id;
         $this->start_date = $this->lease->start_date->format('Y-m-d');
         $this->end_date = $this->lease->end_date?->format('Y-m-d') ?? '';
         $this->rent_amount = $this->lease->rent_amount;
         $this->charges_amount = $this->lease->charges_amount;
         $this->deposit_amount = $this->lease->deposit_amount;
         $this->advance_amount = $this->lease->advance_amount ?? 0;
-        $this->lease_type = $this->lease->lease_type ?? '';
+        $this->lease_type = $this->lease->lease_type?->value ?? '';
         $this->notes = $this->lease->notes ?? '';
 
         $this->js("Flux.modal('edit-lease').show()");
+    }
+
+    public function updatedStartDate($value)
+    {
+        if ($value) {
+            $date = \Illuminate\Support\Carbon::parse($value);
+            if ($date->day !== 1) {
+                $this->start_date = $date->startOfMonth()->format('Y-m-d');
+                $this->js("Flux.toast({ variant: 'warning', text: 'La date de début a été ajustée au 1er du mois.' })");
+            }
+        }
+    }
+
+    public function updatedEndDate($value)
+    {
+        if ($value) {
+            $date = \Illuminate\Support\Carbon::parse($value);
+            if ($date->day !== $date->daysInMonth) {
+                $this->end_date = $date->endOfMonth()->format('Y-m-d');
+                $this->js("Flux.toast({ variant: 'warning', text: 'La date de fin a été ajustée au dernier jour du mois.' })");
+            }
+        }
     }
 
     // Form fields
     #[Validate('required|exists:units,id')]
     public $unit_id = '';
 
-    #[Validate('required|exists:renters,id')]
-    public $renter_id = '';
+    #[Validate('required|exists:clients,id')]
+    public $client_id = '';
 
     #[Validate('required|date')]
     public $start_date = '';
@@ -70,6 +95,9 @@ new class extends Component {
     #[Validate('nullable|string')]
     public $notes = '';
 
+    #[Validate(['documents.*' => 'nullable|file|max:10240'])] // 10MB max per file
+    public $documents = [];
+
     public function setDepositMultiplier()
     {
         if ($this->rent_amount) {
@@ -90,9 +118,21 @@ new class extends Component {
         if (!$this->lease)
             return;
 
+        $oldRent = (float) $this->lease->rent_amount;
+        $newRent = (float) $this->rent_amount;
+
+        if ($oldRent !== $newRent) {
+            $this->lease->adjustments()->create([
+                'old_amount' => $oldRent,
+                'new_amount' => $newRent,
+                'effective_date' => now(),
+                'reason' => 'Ajustement manuel via modification du bail',
+            ]);
+        }
+
         $this->lease->update([
             'unit_id' => $this->unit_id,
-            'renter_id' => $this->renter_id,
+            'client_id' => $this->client_id,
             'start_date' => $this->start_date,
             'end_date' => $this->end_date ?: null,
             'rent_amount' => $this->rent_amount,
@@ -102,6 +142,12 @@ new class extends Component {
             'lease_type' => $this->lease_type ?: null,
             'notes' => $this->notes ?: null,
         ]);
+
+        if (!empty($this->documents)) {
+            foreach ($this->documents as $document) {
+                $this->lease->addMedia($document)->toMediaCollection('documents');
+            }
+        }
 
         $this->dispatch('lease-updated');
         $this->js("Flux.toast('Bail modifié avec succès.')");
@@ -125,20 +171,18 @@ new class extends Component {
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
             <div>
-                <flux:label>Locataire</flux:label>
+                <flux:label>Client</flux:label>
                 <div
                     class="mt-1 flex items-center gap-3 px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-900 shadow-sm">
-                    <flux:avatar size="xs" :name="$lease?->renter->full_name" />
-                    <span class="font-medium text-sm">{{ $lease?->renter->full_name }}</span>
+                    <flux:avatar size="xs" :name="$lease?->client->full_name" />
+                    <span class="font-medium text-sm">{{ $lease?->client->full_name }}</span>
                 </div>
             </div>
 
             <flux:select wire:model="lease_type" label="Type de bail" placeholder="Sélectionner...">
-                <flux:select.option value="vide">Location vide</flux:select.option>
-                <flux:select.option value="meuble">Location meublée</flux:select.option>
-                <flux:select.option value="commercial">Bail commercial</flux:select.option>
-                <flux:select.option value="professionnel">Bail professionnel</flux:select.option>
-                <flux:select.option value="saisonnier">Location saisonnière</flux:select.option>
+                @foreach(\App\Enums\LeaseType::cases() as $type)
+                    <flux:select.option value="{{ $type->value }}">{{ $type->label() }}</flux:select.option>
+                @endforeach
             </flux:select>
         </div>
 
@@ -179,6 +223,12 @@ new class extends Component {
         </div>
 
         <div class="grid grid-cols-1 gap-6">
+            <div class="space-y-2">
+                <flux:input wire:model="documents" type="file" multiple label="Ajouter des documents (Optionnel)" />
+                <div wire:loading wire:target="documents" class="text-xs text-indigo-600">Téléchargement en cours...
+                </div>
+            </div>
+
             <flux:textarea wire:model="notes" label="Notes" rows="2" placeholder="Informations complémentaires..." />
         </div>
 

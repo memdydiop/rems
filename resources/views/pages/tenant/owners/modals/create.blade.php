@@ -8,6 +8,7 @@ use Livewire\Attributes\On;
 new class extends Component {
     public ?Owner $owner = null;
     public bool $modalOpen = false;
+    public bool $shouldRedirect = true;
 
     #[Validate('required|string|max:255')]
     public $first_name = '';
@@ -85,8 +86,11 @@ new class extends Component {
         }
 
         $this->modalOpen = false;
-        $this->dispatch('property-updated'); // Reload parent if needed, though here it's index
-        return redirect()->route('tenant.owners.index');
+        $this->dispatch('owner-created', ownerId: $this->owner?->id ?? Owner::latest()->first()->id);
+
+        if ($this->shouldRedirect) {
+            return redirect()->route('tenant.owners.index');
+        }
     }
 };
 ?>

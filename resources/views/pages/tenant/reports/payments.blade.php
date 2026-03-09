@@ -5,16 +5,13 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use App\Models\RentPayment;
-use App\Models\Renter;
+use App\Models\Client;
 use App\Models\Property;
 use Carbon\Carbon;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\PaymentsExport;
 
-new
-    #[Layout('layouts.app', ['title' => 'Historique des Paiements'])]
-    class extends Component {
-
-    #[Url]
-    public string $status = '';
+new #[Layout('layouts.app', ['title' => 'Historique des Paiements'])] class extends Component {
 
     #[Url]
     public string $year = '';
@@ -34,17 +31,16 @@ new
     public function payments()
     {
         return RentPayment::query()
-            ->with(['lease.renter', 'lease.unit.property'])
-            ->when($this->status, fn($q) => $q->where('status', $this->status))
-            ->when($this->year, fn($q) => $q->whereYear('payment_date', $this->year))
-            ->when($this->month, fn($q) => $q->whereMonth('payment_date', $this->month))
+            ->with(['lease.client', 'lease.unit.property'])
+            ->when($this->year, fn($q) => $q->whereYear('paid_at', $this->year))
+            ->when($this->month, fn($q) => $q->whereMonth('paid_at', $this->month))
             ->when($this->search, fn($q) => $q->whereHas(
-                'lease.renter',
+                'lease.client',
                 fn($r) =>
                 $r->where('first_name', 'ilike', "%{$this->search}%")
                     ->orWhere('last_name', 'ilike', "%{$this->search}%")
             ))
-            ->orderByDesc('payment_date')
+            ->orderByDesc('paid_at')
             ->paginate(20);
     }
 
@@ -52,14 +48,11 @@ new
     public function stats()
     {
         $baseQuery = RentPayment::query()
-            ->when($this->year, fn($q) => $q->whereYear('payment_date', $this->year))
-            ->when($this->month, fn($q) => $q->whereMonth('payment_date', $this->month));
+            ->when($this->year, fn($q) => $q->whereYear('paid_at', $this->year))
+            ->when($this->month, fn($q) => $q->whereMonth('paid_at', $this->month));
 
         return [
             'total' => (clone $baseQuery)->sum('amount'),
-            'paid' => (clone $baseQuery)->where('status', 'completed')->sum('amount'),
-            'pending' => (clone $baseQuery)->where('status', 'pending')->sum('amount'),
-            'overdue' => (clone $baseQuery)->where('status', 'overdue')->sum('amount'),
             'count' => (clone $baseQuery)->count(),
         ];
     }
@@ -71,8 +64,8 @@ new
         $data = collect();
 
         for ($month = 1; $month <= 12; $month++) {
-            $amount = RentPayment::whereYear('payment_date', $year)
-                ->whereMonth('payment_date', $month)
+            $amount = RentPayment::whereYear('paid_at', $year)
+                ->whereMonth('paid_at', $month)
                 ->where('status', 'completed')
                 ->sum('amount');
 
@@ -88,16 +81,23 @@ new
     #[Computed]
     public function years()
     {
-        $startYear = RentPayment::min('payment_date')
-            ? Carbon::parse(RentPayment::min('payment_date'))->year
+        $startYear = RentPayment::min('paid_at')
+            ? Carbon::parse(RentPayment::min('paid_at'))->year
             : now()->year;
         return range(now()->year, $startYear);
     }
 
     public function resetFilters()
     {
-        $this->reset(['status', 'month', 'search']);
+        $this->reset(['month', 'search']);
         $this->year = now()->year;
+    }
+    public function exportPayments()
+    {
+        return Excel::download(
+            new PaymentsExport($this->year, $this->month),
+            'paiements_' . now()->format('Y-m-d') . '.xlsx'
+        );
     }
 };
 ?>
@@ -109,6 +109,9 @@ new
             <flux:button icon="funnel" variant="ghost" wire:click="resetFilters">
                 Réinitialiser
             </flux:button>
+            <flux:button icon="arrow-down-tray" variant="ghost" wire:click="exportPayments">
+                Exporter
+            </flux:button>
             <flux:button icon="printer" variant="ghost" onclick="window.print()">
                 Imprimer
             </flux:button>
@@ -118,7 +121,7 @@ new
         <x-flux::card class="mb-6">
             <div class="p-4 flex flex-wrap gap-4">
                 <flux:input icon="magnifying-glass" wire:model.live.debounce="search"
-                    placeholder="Rechercher par locataire..." class="w-48" />
+                    placeholder="Rechercher par client..." class="w-48" />
 
                 <flux:select wire:model.live="year" class="w-32">
                     @foreach($this->years as $y)
@@ -130,54 +133,30 @@ new
                     <flux:select.option value="">Tous</flux:select.option>
                     @foreach(range(1, 12) as $m)
                         <flux:select.option value="{{ $m }}">
-                            {{ Carbon::createFromDate(null, $m, 1)->translatedFormat('F') }}</flux:select.option>
+                            {{ Carbon::createFromDate(null, $m, 1)->translatedFormat('F') }}
+                        </flux:select.option>
                     @endforeach
-                </flux:select>
-
-                <flux:select wire:model.live="status" placeholder="Tous statuts" class="w-36">
-                    <flux:select.option value="">Tous</flux:select.option>
-                    <flux:select.option value="completed">Payé</flux:select.option>
-                    <flux:select.option value="pending">En attente</flux:select.option>
-                    <flux:select.option value="overdue">En retard</flux:select.option>
                 </flux:select>
             </div>
         </x-flux::card>
 
         <!-- Stats -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <x-flux::card class="bg-zinc-50">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <x-flux::card class="bg-zinc-50 border-zinc-200">
                 <div class="p-4 text-center">
-                    <p class="text-2xl font-bold text-zinc-900">
+                    <p class="text-2xl font-bold text-zinc-700">
                         {{ \Illuminate\Support\Number::currency($this->stats['total'], 'XOF') }}
                     </p>
-                    <p class="text-sm text-zinc-600">Total</p>
+                    <p class="text-sm text-zinc-600">Total Encaissé</p>
                 </div>
             </x-flux::card>
 
             <x-flux::card class="bg-emerald-50 border-emerald-200">
                 <div class="p-4 text-center">
                     <p class="text-2xl font-bold text-emerald-700">
-                        {{ \Illuminate\Support\Number::currency($this->stats['paid'], 'XOF') }}
+                        {{ $this->stats['count'] }}
                     </p>
-                    <p class="text-sm text-emerald-600">Payé</p>
-                </div>
-            </x-flux::card>
-
-            <x-flux::card class="bg-amber-50 border-amber-200">
-                <div class="p-4 text-center">
-                    <p class="text-2xl font-bold text-amber-700">
-                        {{ \Illuminate\Support\Number::currency($this->stats['pending'], 'XOF') }}
-                    </p>
-                    <p class="text-sm text-amber-600">En attente</p>
-                </div>
-            </x-flux::card>
-
-            <x-flux::card class="bg-red-50 border-red-200">
-                <div class="p-4 text-center">
-                    <p class="text-2xl font-bold text-red-700">
-                        {{ \Illuminate\Support\Number::currency($this->stats['overdue'], 'XOF') }}
-                    </p>
-                    <p class="text-sm text-red-600">En retard</p>
+                    <p class="text-sm text-emerald-600">Paiements Enregistrés</p>
                 </div>
             </x-flux::card>
         </div>
@@ -211,22 +190,44 @@ new
             <x-flux::table>
                 <x-flux::table.columns>
                     <x-flux::table.column>Date</x-flux::table.column>
-                    <x-flux::table.column>Locataire</x-flux::table.column>
+                    <x-flux::table.column>Période</x-flux::table.column>
+                    <x-flux::table.column>Client</x-flux::table.column>
                     <x-flux::table.column>Propriété</x-flux::table.column>
                     <x-flux::table.column>Montant</x-flux::table.column>
                     <x-flux::table.column>Méthode</x-flux::table.column>
-                    <x-flux::table.column>Statut</x-flux::table.column>
                 </x-flux::table.columns>
                 <x-flux::table.rows>
                     @forelse($this->payments as $payment)
                         <x-flux::table.row>
-                            <x-flux::table.cell>{{ $payment->payment_date->format('d/m/Y') }}</x-flux::table.cell>
+                            <x-flux::table.cell>{{ $payment->paid_at->format('d/m/Y') }}</x-flux::table.cell>
+                            <x-flux::table.cell class="text-xs text-zinc-600">
+                                <div class="flex items-center gap-2">
+                                    @if($payment->period_start && $payment->period_end)
+                                        @if($payment->period_start->isSameMonth($payment->period_end))
+                                            {{ $payment->period_start->translatedFormat('F Y') }}
+                                        @else
+                                            <span class="whitespace-nowrap italic text-zinc-500">
+                                                {{ $payment->period_start->translatedFormat('M Y') }}
+                                                → {{ $payment->period_end->translatedFormat('M Y') }}
+                                            </span>
+                                        @endif
+                                    @else
+                                        —
+                                    @endif
+                                    @if($payment->months_count > 1)
+                                        <flux:badge size="2xs" color="zinc" variant="outline"
+                                            class="text-[9px] px-1 py-0 h-4 min-h-0">
+                                            {{ $payment->months_count }} mois
+                                        </flux:badge>
+                                    @endif
+                                </div>
+                            </x-flux::table.cell>
                             <x-flux::table.cell class="font-medium">
-                                {{ $payment->lease->renter->first_name }} {{ $payment->lease->renter->last_name }}
+                                {{ $payment->lease->client->first_name }} {{ $payment->lease->client->last_name }}
                             </x-flux::table.cell>
                             <x-flux::table.cell>
                                 <div>
-                                    <p class="text-sm">{{ $payment->lease->unit->property->name }}</p>
+                                    <p class="text-sm font-medium">{{ $payment->lease->unit->property->name }}</p>
                                     <p class="text-xs text-zinc-500">{{ $payment->lease->unit->name }}</p>
                                 </div>
                             </x-flux::table.cell>
@@ -234,25 +235,8 @@ new
                                 {{ \Illuminate\Support\Number::currency($payment->amount, 'XOF') }}
                             </x-flux::table.cell>
                             <x-flux::table.cell>
-                                <flux:badge size="sm" color="zinc">{{ ucfirst($payment->payment_method ?? 'Espèces') }}
+                                <flux:badge size="sm" color="zinc">{{ ucfirst($payment->method ?? 'Espèces') }}
                                 </flux:badge>
-                            </x-flux::table.cell>
-                            <x-flux::table.cell>
-                                @php
-                                    $color = match ($payment->status) {
-                                        'completed' => 'green',
-                                        'pending' => 'yellow',
-                                        'overdue' => 'red',
-                                        default => 'zinc'
-                                    };
-                                    $label = match ($payment->status) {
-                                        'completed' => 'Payé',
-                                        'pending' => 'En attente',
-                                        'overdue' => 'En retard',
-                                        default => $payment->status
-                                    };
-                                @endphp
-                                <flux:badge size="sm" :color="$color">{{ $label }}</flux:badge>
                             </x-flux::table.cell>
                         </x-flux::table.row>
                     @empty

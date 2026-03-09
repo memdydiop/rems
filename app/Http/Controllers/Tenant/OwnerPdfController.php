@@ -27,7 +27,7 @@ class OwnerPdfController extends Controller
             ->whereHas('lease.unit.property', function ($q) use ($owner) {
                 $q->where('owner_id', $owner->id);
             })
-            ->with(['lease.unit.property', 'lease.renter'])
+            ->with(['lease.unit.property', 'lease.client'])
             ->get();
 
         // 2. Aggregate Data
@@ -47,7 +47,7 @@ class OwnerPdfController extends Controller
                 'property_name' => $property->name,
                 'address' => $property->address,
                 'unit_name' => $unit->name,
-                'renter_name' => $lease->renter->first_name . ' ' . $lease->renter->last_name,
+                'client_name' => $lease->client->first_name . ' ' . $lease->client->last_name,
                 'rent_collected' => $amount,
                 'commission' => $commission,
             ];

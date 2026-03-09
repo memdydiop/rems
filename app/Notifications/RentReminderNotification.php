@@ -43,7 +43,7 @@ class RentReminderNotification extends Notification implements ShouldQueue
     {
         return [
             'type' => 'rent_reminder',
-            'lease_id' => $this->lease->id,
+            'client_id' => $this->lease->id,
             'unit_name' => $this->lease->unit?->name,
             'amount' => $this->lease->rent_amount,
             'days_until_due' => $this->daysUntilDue,

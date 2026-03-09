@@ -59,6 +59,7 @@ Route::middleware([
     })->name('tenancy.impersonate.leave');
 
     // Impersonation Entry Route
+    // Impersonation Entry Route
     Route::get('/impersonate/{token}', function ($token) {
         $response = \Stancl\Tenancy\Features\UserImpersonation::makeResponse($token);
         session()->put('impersonating_from_central', true);
@@ -75,7 +76,7 @@ Route::middleware([
             Route::livewire('/properties/{property}', 'pages::tenant.properties.show')->name('tenant.properties.show');
             Route::livewire('/units', 'pages::tenant.units.index')->name('tenant.units.index');
             Route::livewire('/units/{unit}', 'pages::tenant.units.show')->name('tenant.units.show');
-            Route::livewire('/renters', 'pages::tenant.renters.index')->name('tenant.renters.index');
+            Route::livewire('/clients', 'pages::tenant.clients.index')->name('tenant.clients.index');
             Route::livewire('/projects', 'pages::tenant.projects.index')->name('tenant.projects.index');
             Route::livewire('/projects/{project}', 'pages::tenant.projects.show')->name('tenant.projects.show');
             Route::livewire('/maintenance/units', 'pages::tenant.maintenance.units.index')->name('tenant.maintenance.units.index');
@@ -130,16 +131,16 @@ Route::middleware([
 
 
 
-    // Renter Portal Routes
-    Route::middleware(['auth', \App\Http\Middleware\RenterAccess::class])
-        ->prefix('renter')
-        ->name('renter.')
+    // Client Portal Routes
+    Route::middleware(['auth', \App\Http\Middleware\ClientAccess::class])
+        ->prefix('client')
+        ->name('client.')
         ->group(function () {
-            Route::livewire('/', 'pages::renter.dashboard')->name('dashboard');
-            Route::livewire('/payments', 'pages::renter.payments')->name('payments');
-            Route::get('/pay', [\App\Http\Controllers\Tenant\RenterPaymentController::class, 'show'])->name('pay');
-            Route::post('/pay/initialize', [\App\Http\Controllers\Tenant\RenterPaymentController::class, 'initialize'])->name('pay.initialize');
-            Route::get('/pay/callback', [\App\Http\Controllers\Tenant\RenterPaymentController::class, 'callback'])->name('pay.callback');
+            Route::livewire('/', 'pages::client.dashboard')->name('dashboard');
+            Route::livewire('/payments', 'pages::client.payments')->name('payments');
+            Route::get('/pay', [\App\Http\Controllers\Tenant\ClientPaymentController::class, 'show'])->name('pay');
+            Route::post('/pay/initialize', [\App\Http\Controllers\Tenant\ClientPaymentController::class, 'initialize'])->name('pay.initialize');
+            Route::get('/pay/callback', [\App\Http\Controllers\Tenant\ClientPaymentController::class, 'callback'])->name('pay.callback');
         });
 
     // Owner Portal Routes
@@ -173,7 +174,7 @@ Route::middleware([
         // Resources (Full CRUD)
         Route::apiResource('properties', \App\Http\Controllers\Api\PropertyController::class);
         Route::apiResource('units', \App\Http\Controllers\Api\UnitController::class);
-        Route::apiResource('renters', \App\Http\Controllers\Api\RenterController::class);
+        Route::apiResource('clients', \App\Http\Controllers\Api\ClientController::class);
         Route::apiResource('leases', \App\Http\Controllers\Api\LeaseController::class);
         Route::apiResource('tasks', \App\Http\Controllers\Api\TaskController::class)->only(['index', 'show', 'update']);
         Route::apiResource('expenses', \App\Http\Controllers\Api\ExpenseController::class);

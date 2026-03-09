@@ -1,7 +1,7 @@
 @component('emails.layout')
 <h1>Rappel de paiement de loyer</h1>
 
-<p>Bonjour {{ $renter->first_name }},</p>
+<p>Bonjour {{ $client->first_name }},</p>
 
 <p>Ceci est un rappel amical concernant votre paiement de loyer à venir.</p>
 

@@ -122,16 +122,16 @@
                 <div class="info-value">{{ $property->address ?? 'N/A' }}</div>
             </div>
             <div class="info-row">
-                <div class="info-label">Locataire</div>
-                <div class="info-value">{{ $lease->renter->first_name }} {{ $lease->renter->last_name }}</div>
+                <div class="info-label">Client</div>
+                <div class="info-value">{{ $lease->client->first_name }} {{ $lease->client->last_name }}</div>
             </div>
             <div class="info-row">
-                <div class="info-label">Email du locataire</div>
-                <div class="info-value">{{ $lease->renter->email }}</div>
+                <div class="info-label">Email du client</div>
+                <div class="info-value">{{ $lease->client->email }}</div>
             </div>
             <div class="info-row">
-                <div class="info-label">Téléphone du locataire</div>
-                <div class="info-value">{{ $lease->renter->phone ?? 'N/A' }}</div>
+                <div class="info-label">Téléphone du client</div>
+                <div class="info-value">{{ $lease->client->phone ?? 'N/A' }}</div>
             </div>
         </div>
     </div>
@@ -186,8 +186,8 @@
             <div style="display: table-cell; width: 10%;"></div>
             <div class="signature-box">
                 <div class="signature-line"></div>
-                <p><strong>Le Locataire</strong></p>
-                <p>{{ $lease->renter->first_name }} {{ $lease->renter->last_name }}</p>
+                <p><strong>Le Client</strong></p>
+                <p>{{ $lease->client->first_name }} {{ $lease->client->last_name }}</p>
             </div>
         </div>
     </div>

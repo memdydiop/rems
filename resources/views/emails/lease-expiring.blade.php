@@ -6,7 +6,7 @@
 <p>Ce message est pour vous informer qu'un bail arrive à expiration prochainement.</p>
 
 <div class="info-box">
-    <p><strong>Locataire :</strong> {{ $lease->renter->first_name }} {{ $lease->renter->last_name }}</p>
+    <p><strong>Client :</strong> {{ $lease->client->first_name }} {{ $lease->client->last_name }}</p>
     <p><strong>Propriété :</strong> {{ $lease->unit->property->name }}</p>
     <p><strong>Unité :</strong> {{ $lease->unit->name }}</p>
     <p><strong>Date de fin :</strong> {{ $lease->end_date->format('d/m/Y') }}</p>
@@ -15,7 +15,7 @@
 
 <p>Actions recommandées :</p>
 <ul>
-    <li>Contacter le locataire pour discuter du renouvellement</li>
+    <li>Contacter le client pour discuter du renouvellement</li>
     <li>Préparer un nouveau contrat si nécessaire</li>
     <li>Planifier l'état des lieux de sortie</li>
 </ul>

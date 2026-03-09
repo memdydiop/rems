@@ -10,10 +10,10 @@ class LeaseController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Lease::with('unit', 'renter')->latest();
+        $query = Lease::with('unit', 'client')->latest();
 
-        if ($request->has('renter_id')) {
-            $query->where('renter_id', $request->renter_id);
+        if ($request->has('client_id')) {
+            $query->where('client_id', $request->client_id);
         }
 
         if ($request->has('unit_id')) {
@@ -27,7 +27,7 @@ class LeaseController extends Controller
     {
         $validated = $request->validate([
             'unit_id' => 'required|uuid|exists:units,id',
-            'renter_id' => 'required|uuid|exists:renters,id',
+            'client_id' => 'required|uuid|exists:clients,id',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after:start_date',
             'rent_amount' => 'required|numeric|min:0',
@@ -37,13 +37,13 @@ class LeaseController extends Controller
 
         $lease = Lease::create($validated);
 
-        return response()->json($lease->load('unit', 'renter'), 201);
+        return response()->json($lease->load('unit', 'client'), 201);
     }
 
     public function show(Lease $lease)
     {
         return response()->json(
-            $lease->load('unit', 'renter', 'payments')
+            $lease->load('unit', 'client', 'payments')
         );
     }
 

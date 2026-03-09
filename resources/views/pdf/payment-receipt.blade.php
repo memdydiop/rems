@@ -172,19 +172,19 @@
     </div>
 
     <div class="section">
-        <div class="section-title">Locataire</div>
+        <div class="section-title">Client</div>
         <div class="info-grid">
             <div class="info-row">
                 <div class="info-label">Nom complet</div>
-                <div class="info-value">{{ $renter->first_name }} {{ $renter->last_name }}</div>
+                <div class="info-value">{{ $client->first_name }} {{ $client->last_name }}</div>
             </div>
             <div class="info-row">
                 <div class="info-label">Email</div>
-                <div class="info-value">{{ $renter->email }}</div>
+                <div class="info-value">{{ $client->email }}</div>
             </div>
             <div class="info-row">
                 <div class="info-label">Téléphone</div>
-                <div class="info-value">{{ $renter->phone ?? 'N/A' }}</div>
+                <div class="info-value">{{ $client->phone ?? 'N/A' }}</div>
             </div>
         </div>
     </div>

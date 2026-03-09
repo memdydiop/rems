@@ -10,7 +10,7 @@ class RentPaymentController extends Controller
 {
     public function index(Request $request)
     {
-        $query = RentPayment::with('lease.renter', 'lease.unit')->latest();
+        $query = RentPayment::with('lease.client', 'lease.unit')->latest();
 
         if ($request->has('lease_id')) {
             $query->where('lease_id', $request->lease_id);
@@ -38,7 +38,7 @@ class RentPaymentController extends Controller
     public function show(RentPayment $rentPayment)
     {
         return response()->json(
-            $rentPayment->load('lease.renter', 'lease.unit')
+            $rentPayment->load('lease.client', 'lease.unit')
         );
     }
 

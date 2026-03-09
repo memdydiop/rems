@@ -114,7 +114,7 @@ new #[Layout('layouts.app', ['title' => 'Activity Log'])] class extends Componen
                                         'Property' => 'Propriété',
                                         'Unit' => 'Unité',
                                         'Lease' => 'Bail',
-                                        'Renter' => 'Locataire',
+                                        'Client' => 'Client',
                                         'RentPayment' => 'Paiement',
                                         'MaintenanceRequest' => 'Ticket',
                                         'Expense' => 'Dépense',
@@ -152,7 +152,7 @@ new #[Layout('layouts.app', ['title' => 'Activity Log'])] class extends Componen
                                     <flux:button variant="ghost" size="xs" icon="eye"
                                         wire:click="$dispatch('open-modal', { name: 'activity-details-{{ $activity->id }}' })" />
 
-                                    <flux:modal name="activity-details-{{ $activity->id }}" class="min-w-[400px]">
+                                    <flux:modal name="activity-details" class="min-w-100">
                                         <div class="space-y-6">
                                             <div>
                                                 <h3 class="font-bold text-lg text-zinc-900 mb-2">Modifications</h3>

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\LeaseStatus;
+use App\Enums\LeaseType;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -12,13 +13,16 @@ use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Lease extends Model
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
+
+class Lease extends Model implements HasMedia
 {
-    use HasFactory, HasUuids, LogsActivity, SoftDeletes;
+    use HasFactory, HasUuids, LogsActivity, SoftDeletes, InteractsWithMedia;
 
     protected $fillable = [
         'unit_id',
-        'renter_id',
+        'client_id',
         'start_date',
         'end_date',
         'notice_date',
@@ -44,6 +48,7 @@ class Lease extends Model
         'deposit_amount' => 'decimal:2',
         'advance_amount' => 'decimal:2',
         'status' => LeaseStatus::class,
+        'lease_type' => LeaseType::class,
     ];
 
     public function getActivitylogOptions(): LogOptions
@@ -56,17 +61,27 @@ class Lease extends Model
 
     public function unit(): BelongsTo
     {
-        return $this->belongsTo(Unit::class);
+        return $this->belongsTo(Unit::class)->withTrashed();
     }
 
-    public function renter(): BelongsTo
+    public function client(): BelongsTo
     {
-        return $this->belongsTo(Renter::class);
+        return $this->belongsTo(Client::class);
     }
 
     public function payments(): HasMany
     {
         return $this->hasMany(RentPayment::class);
+    }
+
+    public function deposits(): HasMany
+    {
+        return $this->hasMany(Deposit::class);
+    }
+
+    public function adjustments(): HasMany
+    {
+        return $this->hasMany(RentAdjustment::class);
     }
 
     public function scopeOverdue($query)

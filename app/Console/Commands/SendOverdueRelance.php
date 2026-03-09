@@ -12,7 +12,7 @@ use Stancl\Tenancy\Facades\Tenancy;
 class SendOverdueRelance extends Command
 {
     protected $signature = 'pms:send-overdue-relance {--days=5 : Days overdue (5=reminder, 15=warning, 30=urgent)}';
-    protected $description = 'Send overdue payment relance notifications to renters';
+    protected $description = 'Send overdue payment relance notifications to clients';
 
     public function handle(): int
     {
@@ -30,14 +30,14 @@ class SendOverdueRelance extends Command
 
             try {
                 $leases = Lease::where('status', LeaseStatus::Active)
-                    ->with(['renter', 'unit.property', 'payments'])
+                    ->with(['client', 'unit.property', 'payments'])
                     ->get();
 
                 foreach ($leases as $lease) {
                     /** @var \App\Models\Lease $lease */
-                    $renter = $lease->renter;
+                    $client = $lease->client;
 
-                    if (!$renter || (empty($renter->email) && empty($renter->phone))) {
+                    if (!$client || (empty($client->email) && empty($client->phone))) {
                         continue;
                     }
 
@@ -59,9 +59,9 @@ class SendOverdueRelance extends Command
 
                     // Send notification if overdue matches the configured days
                     if ($daysOverdue >= $days && $daysOverdue < $days + 1) {
-                        $renter->notify(new OverduePaymentNotification($lease, $daysOverdue, $level));
+                        $client->notify(new OverduePaymentNotification($lease, $daysOverdue, $level));
                         $totalSent++;
-                        $contact = $renter->email ?? $renter->phone;
+                        $contact = $client->email ?? $client->phone;
                         $this->info("[{$level}] Relance envoyée à {$contact} ({$daysOverdue}j de retard)");
                     }
                 }

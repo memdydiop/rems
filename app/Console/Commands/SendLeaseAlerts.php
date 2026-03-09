@@ -44,7 +44,7 @@ class SendLeaseAlerts extends Command
 
         $leases = Lease::where('status', LeaseStatus::Active)
             ->whereDate('end_date', $targetDate)
-            ->with(['renter', 'unit.property'])
+            ->with(['client', 'unit.property'])
             ->get();
 
         foreach ($leases as $lease) {

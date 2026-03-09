@@ -5,6 +5,8 @@ use App\Models\Unit;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\PropertiesExport;
 
 new #[Layout('layouts.app', ['title' => 'Propriétés'])] class extends Component {
     use WithPagination;
@@ -72,6 +74,10 @@ new #[Layout('layouts.app', ['title' => 'Propriétés'])] class extends Componen
             Flux\Flux::toast('Propriété supprimée avec succès.', 'success');
         }
     }
+    public function exportProperties()
+    {
+        return Excel::download(new PropertiesExport, 'proprietes_' . now()->format('Y-m-d') . '.xlsx');
+    }
 };
 ?>
 
@@ -79,6 +85,9 @@ new #[Layout('layouts.app', ['title' => 'Propriétés'])] class extends Componen
     <x-layouts::content heading="Propriétés" subheading="Gérez votre patrimoine immobilier efficacement.">
 
         <x-slot name="actions">
+            <flux:button icon="arrow-down-tray" variant="ghost" wire:click="exportProperties">
+                Exporter
+            </flux:button>
             <flux:button icon="plus" variant="primary"
                 wire:click="$dispatch('open-modal', { name: 'create-property' })">
                 Ajouter une Propriété
@@ -257,4 +266,5 @@ new #[Layout('layouts.app', ['title' => 'Propriétés'])] class extends Componen
     </x-layouts::content>
 
     <livewire:pages::tenant.properties.modals.create />
+    <livewire:pages::tenant.owners.modals.create :shouldRedirect="false" />
 </div>

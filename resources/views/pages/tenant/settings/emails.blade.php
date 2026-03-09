@@ -3,7 +3,7 @@
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use App\Models\Lease;
-use App\Models\Renter;
+use App\Models\Client;
 use App\Models\MaintenanceRequest;
 
 new
@@ -20,7 +20,7 @@ new
                 'domain' => 'exemple.votreapp.com',
             ],
             'rent-reminder' => [
-                'renter' => (object)['first_name' => 'Jean'],
+                'client' => (object)['first_name' => 'Jean'],
                 'amount' => 150000,
                 'dueDate' => now()->addDays(3),
                 'property' => 'Résidence Les Jardins',
@@ -28,7 +28,7 @@ new
             ],
             'lease-expiring' => [
                 'lease' => (object)[
-                    'renter' => (object)['first_name' => 'Marie', 'last_name' => 'Dupont'],
+                    'client' => (object)['first_name' => 'Marie', 'last_name' => 'Dupont'],
                     'unit' => (object)[
                         'name' => 'Bureau B2',
                         'property' => (object)['name' => 'Immeuble Commerce'],
@@ -41,7 +41,7 @@ new
                 'request' => (object)[
                     'priority' => 'high',
                     'description' => 'Fuite d\'eau dans la salle de bain, urgent.',
-                    'renter' => (object)['first_name' => 'Pierre', 'last_name' => 'Martin'],
+                    'client' => (object)['first_name' => 'Pierre', 'last_name' => 'Martin'],
                     'unit' => (object)[
                         'name' => 'Apt C3',
                         'property' => (object)['name' => 'Résidence Soleil'],

@@ -2,7 +2,7 @@
 
 namespace App\Mail;
 
-use App\Models\Renter;
+use App\Models\Client;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -16,7 +16,7 @@ class RentReminderMail extends Mailable implements ShouldQueue
     use Queueable, SerializesModels;
 
     public function __construct(
-        public Renter $renter,
+        public Client $client,
         public float $amount,
         public Carbon $dueDate,
         public string $property,

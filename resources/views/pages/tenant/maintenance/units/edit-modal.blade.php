@@ -3,7 +3,6 @@
 use App\Models\MaintenanceRequest;
 use App\Models\Property;
 use App\Models\Unit;
-use App\Models\Renter;
 use Livewire\Component;
 use Livewire\Attributes\Validate;
 use Livewire\Attributes\On;
@@ -177,7 +176,7 @@ new class extends Component {
 
             <div class="grid grid-cols-2 gap-4">
                 <flux:input wire:model="reported_by" label="Signalé par (optionnel)"
-                    placeholder="ex: Le locataire, ou le gardien" />
+                    placeholder="ex: Le client, ou le gardien" />
 
                 <flux:input wire:model="reporter_phone" label="Téléphone (optionnel)" placeholder="N° de téléphone" />
             </div>

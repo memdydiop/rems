@@ -33,6 +33,10 @@ new #[Layout('layouts.app', ['title' => 'Property Details'])] class extends Comp
     public function mount(Property $property)
     {
         $this->property = $property;
+
+        if ($this->property->type->isStandalone()) {
+            $this->tab = 'details';
+        }
     }
 
     public function deleteUnit($unitId)
@@ -59,13 +63,13 @@ new #[Layout('layouts.app', ['title' => 'Property Details'])] class extends Comp
 
         // Get paginated units for table
         $units = $this->property->units()
-            ->with(['leases' => fn($q) => $q->where('status', 'active')->with('renter')])
+            ->with(['leases' => fn($q) => $q->where('status', 'active')->with('client')])
             ->when($this->search, function ($query) {
                 $query->where(function ($q) {
                     $q->where('name', 'like', '%' . $this->search . '%')
                         ->orWhereHas('leases', function ($q) {
                             $q->where('status', 'active')
-                                ->whereHas('renter', function ($q) {
+                                ->whereHas('client', function ($q) {
                                     $q->where('first_name', 'like', '%' . $this->search . '%')
                                         ->orWhere('last_name', 'like', '%' . $this->search . '%')
                                         ->orWhere('email', 'like', '%' . $this->search . '%');
@@ -83,9 +87,12 @@ new #[Layout('layouts.app', ['title' => 'Property Details'])] class extends Comp
             ->get();
 
         $leases = \App\Models\Lease::whereIn('unit_id', $unitIds)
-            ->with(['unit', 'renter'])
+            ->with(['unit', 'client'])
             ->latest()
             ->paginate($this->perPage);
+
+        $isStandalone = $this->property->type->isStandalone();
+        $singleUnit = $isStandalone ? $this->property->units()->with('activeLease.client')->first() : null;
 
         return [
             'units' => $units,
@@ -96,6 +103,8 @@ new #[Layout('layouts.app', ['title' => 'Property Details'])] class extends Comp
             'occupiedUnits' => $occupiedUnits,
             'occupancyRate' => $totalUnits > 0 ? round(($occupiedUnits / $totalUnits) * 100) : 0,
             'maintenanceRequests' => $maintenanceRequests,
+            'isStandalone' => $isStandalone,
+            'singleUnit' => $singleUnit,
         ];
     }
 };
@@ -103,8 +112,19 @@ new #[Layout('layouts.app', ['title' => 'Property Details'])] class extends Comp
 
 <div>
 
-    <x-layouts::content heading="{{ $property->name }}"
+    <x-layouts::content 
+        heading="{{ $property->name }}"
         subheading="{{ $property->address ?? 'Adresse non renseignée' }}">
+
+        @if(!$isStandalone)
+        <x-slot:actions>
+            <flux:button variant="primary" icon="plus" 
+                x-on:click="Flux.modal('create-unit').show()">
+                Ajouter Unité
+            </flux:button>
+        </x-slot:actions>
+        @endif
+
         <!-- Hero Header -->
         <div
             class="relative overflow-hidden bg-linear-to-br from-indigo-600 via-violet-600 to-purple-600 rounded-3xl shadow-lg shadow-indigo-200">
@@ -177,11 +197,7 @@ new #[Layout('layouts.app', ['title' => 'Property Details'])] class extends Comp
                             wire:click="$dispatch('open-modal', { name: 'edit-property', property: '{{ $property->id }}' })">
                             Modifier
                         </flux:button>
-                        <flux:button variant="filled"
-                            class="bg-white! text-indigo-600! hover:bg-indigo-50! border-transparent! shadow-md"
-                            icon="plus" x-on:click="Flux.modal('create-unit').show()">
-                            Ajouter Unité
-                        </flux:button>
+                        
                     </div>
                 </div>
             </div>
@@ -196,11 +212,18 @@ new #[Layout('layouts.app', ['title' => 'Property Details'])] class extends Comp
                         <flux:icon.home class="size-6 text-blue-600" />
                     </div>
                     <div>
-                        <p class="text-sm font-medium text-zinc-500">Unités</p>
+                        <p class="text-sm font-medium text-zinc-500">{{ $isStandalone ? 'Type d\'unité' : 'Unités' }}</p>
                         <div class="flex items-baseline gap-2">
-                            <h3 class="text-2xl font-bold text-zinc-900">{{ $units->total() }}</h3>
-                            <span
-                                class="text-xs font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full">Total</span>
+                            <h3 class="text-2xl font-bold text-zinc-900">
+                                @if($isStandalone)
+                                    {{ $singleUnit?->type->label() }}
+                                @else
+                                    {{ $units->total() }}
+                                @endif
+                            </h3>
+                            @if(!$isStandalone)
+                                <span class="text-xs font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full">Total</span>
+                            @endif
                         </div>
                     </div>
                 </x-flux::card.body>
@@ -213,10 +236,16 @@ new #[Layout('layouts.app', ['title' => 'Property Details'])] class extends Comp
                         <flux:icon.users class="size-6 text-emerald-600" />
                     </div>
                     <div>
-                        <p class="text-sm font-medium text-zinc-500">Occupées</p>
+                        <p class="text-sm font-medium text-zinc-500">Statut</p>
                         <div class="flex items-baseline gap-2">
-                            <h3 class="text-2xl font-bold text-zinc-900">{{ $occupiedUnits }}</h3>
-                            <span class="text-xs font-medium text-zinc-500">/ {{ $units->count() }}</span>
+                            @if($isStandalone)
+                                <flux:badge :color="$singleUnit?->status->color()" size="sm">
+                                    {{ $singleUnit?->status->label() }}
+                                </flux:badge>
+                            @else
+                                <h3 class="text-2xl font-bold text-zinc-900">{{ $occupiedUnits }}</h3>
+                                <span class="text-xs font-medium text-zinc-500">/ {{ $units->count() }}</span>
+                            @endif
                         </div>
                     </div>
                 </x-flux::card.body>
@@ -242,30 +271,43 @@ new #[Layout('layouts.app', ['title' => 'Property Details'])] class extends Comp
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- Left Column: Units (2/3) -->
             <div class="lg:col-span-2">
-                <!-- Tabs -->
-                <div class="flex gap-1 border-b border-zinc-200">
-                    <button wire:click="$set('tab', 'units')"
-                        class="flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors {{ $tab === 'units' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-zinc-500 hover:text-zinc-700 hover:border-zinc-300' }}">
-                        <flux:icon name="home" class="size-4" />
-                        Unités
-                        <flux:badge size="sm" color="zinc">{{ $units->total() }}</flux:badge>
-                    </button>
-                    <button wire:click="$set('tab', 'leases')"
-                        class="flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors {{ $tab === 'leases' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-zinc-500 hover:text-zinc-700 hover:border-zinc-300' }}">
-                        <flux:icon name="document-text" class="size-4" />
-                        Baux
-                        <flux:badge size="sm" color="zinc">{{ $leases->total() }}</flux:badge>
-                    </button>
-                </div>
+                @if($isStandalone)
+                    <!-- Tabs -->
+                    <div class="flex gap-1 border-b border-zinc-200">
+                        
+                        <button wire:click="$set('tab', '{{ $isStandalone ? 'details' : 'units' }}')"
+                            class="flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors {{ ($tab === 'units' || $tab === 'details') ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-zinc-500 hover:text-zinc-700 hover:border-zinc-300' }}">
+                            <flux:icon name="home" class="size-4" />
+                            {{ $isStandalone ? 'Détails' : 'Unités' }}
+                            @if(!$isStandalone)
+                                <flux:badge size="sm" color="zinc">{{ $units->total() }}</flux:badge>
+                            @endif
+                        </button>
+                        <button wire:click="$set('tab', 'leases')"
+                            class="flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors {{ $tab === 'leases' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-zinc-500 hover:text-zinc-700 hover:border-zinc-300' }}">
+                            <flux:icon name="document-text" class="size-4" />
+                            {{ $isStandalone ? 'Contrat de bail' : 'Baux' }}
+                            @if(!$isStandalone)
+                                <flux:badge size="sm" color="zinc">{{ $leases->total() }}</flux:badge>
+                            @endif
+                        </button>
+                        @if($isStandalone)
+                            <button wire:click="$set('tab', 'maintenance')"
+                                class="flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors {{ $tab === 'maintenance' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-zinc-500 hover:text-zinc-700 hover:border-zinc-300' }}">
+                                <flux:icon name="wrench-screwdriver" class="size-4" />
+                                Maintenance
+                            </button>
+                        @endif
+                    </div>
+                @endif
 
-                @if($tab === 'units')
+                @if(!$isStandalone)
                     <x-flux::card class="p-0 overflow-hidden border border-zinc-100 shadow-sm rounded-t-none border-t-0">
                         <x-flux::card.header icon="home" title="Unités Locatives" subtitle="Gestion des lots et occupation"
                             class="bg-zinc-50/50">
                             <x-slot:cardActions>
-                                <flux:button variant="ghost" size="xs" x-on:click="Flux.modal('create-unit').show()">
-                                    Ajouter Unité
-                                </flux:button>
+                                <flux:button variant="primary" icon="plus" size="xs" 
+                                x-on:click="Flux.modal('create-unit').show()"/>
                             </x-slot:cardActions>
                         </x-flux::card.header>
 
@@ -273,7 +315,7 @@ new #[Layout('layouts.app', ['title' => 'Property Details'])] class extends Comp
                             <x-flux::table.columns>
                                 <x-flux::table.column>Unité</x-flux::table.column>
                                 <x-flux::table.column>Type</x-flux::table.column>
-                                <x-flux::table.column>Loyer</x-flux::table.column>
+                                <x-flux::table.column>Prix / Loyer</x-flux::table.column>
                                 <x-flux::table.column>Statut</x-flux::table.column>
                                 <x-flux::table.column align="right">Actions</x-flux::table.column>
                             </x-flux::table.columns>
@@ -289,9 +331,22 @@ new #[Layout('layouts.app', ['title' => 'Property Details'])] class extends Comp
                                         <x-flux::table.cell>{{ $unit->type->label() }}</x-flux::table.cell>
                                         <x-flux::table.cell>
                                             @if($unit->activeLease)
-                                                {{ Number::currency($unit->activeLease->rent_amount, 'XOF') }}
+                                                <div class="flex flex-col">
+                                                    <span class="text-xs text-indigo-500 font-bold uppercase tracking-tighter">Loyer</span>
+                                                    <span>{{ Number::currency($unit->activeLease->rent_amount, 'XOF') }}</span>
+                                                </div>
+                                            @elseif($unit->isForSale())
+                                                <div class="flex flex-col">
+                                                    <span class="text-xs text-emerald-500 font-bold uppercase tracking-tighter">Vente</span>
+                                                    <span>{{ $unit->sale_price ? Number::currency($unit->sale_price, 'XOF') : '--' }}</span>
+                                                </div>
+                                            @elseif($unit->isForRental())
+                                                <div class="flex flex-col">
+                                                    <span class="text-xs text-zinc-400 font-bold uppercase tracking-tighter">Loyer attendu</span>
+                                                    <span>{{ $unit->rent_amount ? Number::currency($unit->rent_amount, 'XOF') : '--' }}</span>
+                                                </div>
                                             @else
-                                                <span class="text-zinc-400 italic">Non loué</span>
+                                                <span class="text-zinc-400 italic">Non défini</span>
                                             @endif
                                         </x-flux::table.cell>
                                         <x-flux::table.cell>
@@ -321,11 +376,24 @@ new #[Layout('layouts.app', ['title' => 'Property Details'])] class extends Comp
                                                         Modifier
                                                     </flux:menu.item>
 
-                                                    @if($unit->status->value === 'vacant')
-                                                        <flux:menu.separator />
+                                                    <flux:menu.separator />
+
+                                                    @if($unit->activeLease)
+                                                        <flux:menu.item icon="document-text" 
+                                                            wire:click="$dispatch('open-modal', { name: 'edit-lease', lease_id: '{{ $unit->activeLease->id }}' })">
+                                                            Voir bail
+                                                        </flux:menu.item>
+                                                    @elseif($unit->isForRental())
                                                         <flux:menu.item icon="document-text" :disabled="$unit->isUnderMaintenance()"
                                                             wire:click="$dispatch('open-modal', { name: 'create-lease', unit_id: '{{ $unit->id }}' })">
-                                                            Ajouter un bail
+                                                            Ajouter bail
+                                                        </flux:menu.item>
+                                                    @endif
+
+                                                    @if($unit->status->value === 'vacant' && $unit->isForSale())
+                                                        <flux:menu.item icon="banknotes" :disabled="$unit->isUnderMaintenance()"
+                                                            wire:click="$dispatch('open-modal', { name: 'record-sale', unit_id: '{{ $unit->id }}' })">
+                                                            Enregistrer une vente
                                                         </flux:menu.item>
                                                     @endif
 
@@ -362,108 +430,301 @@ new #[Layout('layouts.app', ['title' => 'Property Details'])] class extends Comp
                     </x-flux::card>
                 @endif
 
-                @if($tab === 'leases')
-                    <x-flux::card class="p-0 overflow-hidden border border-zinc-100 shadow-sm rounded-t-none border-t-0">
-                        <x-flux::card.header icon="document-text" title="Baux Actifs"
-                            subtitle="Gestion des contrats de location" class="bg-zinc-50/50">
-                            <x-slot:cardActions>
-                                <flux:button variant="ghost" size="xs" x-on:click="Flux.modal('create-lease').show()">
-                                    Ajouter Bail
-                                </flux:button>
-                            </x-slot:cardActions>
-                        </x-flux::card.header>
+                @if($tab === 'details' && $isStandalone)
+                    <x-flux::card>
+                        <x-flux::card.header icon="information-circle" title="Détails de l'unité" />
+                        <x-flux::card.body class="space-y-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div class="space-y-4">
+                                    <div class="p-4 rounded-2xl bg-zinc-50 border border-zinc-100/50">
+                                        <div class="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2">Surface habitable</div>
+                                        <div class="flex items-baseline gap-1">
+                                            <span class="text-2xl font-black text-zinc-900">{{ $singleUnit?->surface_area ?: '--' }}</span>
+                                            <span class="text-sm font-medium text-zinc-500">m²</span>
+                                        </div>
+                                    </div>
 
-                        <x-flux::table :paginate="$leases" linesPerPage>
+                                    <div class="grid grid-cols-3 gap-4">
+                                        <div class="p-3 rounded-xl bg-zinc-50 border border-zinc-100/50">
+                                            <div class="text-2xs font-bold text-zinc-400 uppercase tracking-tight mb-1">Pièces</div>
+                                            <div class="text-lg font-bold text-zinc-900">{{ $singleUnit?->rooms_count ?: '--' }}</div>
+                                        </div>
+                                        <div class="p-3 rounded-xl bg-zinc-50 border border-zinc-100/50">
+                                            <div class="text-2xs font-bold text-zinc-400 uppercase tracking-tight mb-1">SDB</div>
+                                            <div class="text-lg font-bold text-zinc-900">{{ $singleUnit?->bathrooms_count ?: '--' }}</div>
+                                        </div>
+                                        <div class="p-3 rounded-xl bg-zinc-50 border border-zinc-100/50">
+                                            <div class="text-2xs font-bold text-zinc-400 uppercase tracking-tight mb-1">Étage</div>
+                                            <div class="text-lg font-bold text-zinc-900">{{ is_numeric($singleUnit?->floor_number) ? ($singleUnit->floor_number == 0 ? 'RDC' : $singleUnit->floor_number) : '--' }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-4">
+                                    @if($singleUnit?->isForRental())
+                                        <div class="p-4 rounded-2xl bg-indigo-50/30 border border-indigo-100/50">
+                                            <div class="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-2">Gestion locative</div>
+                                            <div class="text-sm font-medium text-indigo-600">
+                                                Le loyer sera défini lors de la création du bail.
+                                            </div>
+                                        </div>
+                                    @else
+                                        <div class="p-4 rounded-2xl bg-emerald-50/30 border border-emerald-100/50">
+                                            <div class="text-xs font-bold text-emerald-400 uppercase tracking-widest mb-2">Prix de vente</div>
+                                            <div class="text-2xl font-black text-emerald-600">
+                                                {{ $singleUnit?->sale_price ? Number::currency($singleUnit->sale_price, 'XOF') : 'Non renseigné' }}
+                                            </div>
+                                        </div>
+                                    @endif
+
+                                    <div class="p-4 rounded-2xl bg-zinc-50 border border-zinc-100/50 space-y-3">
+                                        <div class="flex items-center justify-between">
+                                            <div class="text-2xs font-bold text-zinc-400 uppercase tracking-tight">Compteur CIE</div>
+                                            <div class="text-sm font-medium text-zinc-900">{{ $singleUnit?->electricity_meter_number ?: '--' }}</div>
+                                        </div>
+                                        <flux:separator variant="subtle" />
+                                        <div class="flex items-center justify-between">
+                                            <div class="text-2xs font-bold text-zinc-400 uppercase tracking-tight">Compteur SODECI</div>
+                                            <div class="text-sm font-medium text-zinc-900">{{ $singleUnit?->water_meter_number ?: '--' }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            @php
+                                $allAmenities = array_unique(array_merge($property->getAmenityLabels(), $singleUnit?->getAmenityLabels() ?? []));
+                            @endphp
+
+                            @if(count($allAmenities) > 0)
+                                <div class="p-4 rounded-2xl bg-zinc-50 border border-zinc-100/50">
+                                    <div class="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-3">Commodités</div>
+                                    <div class="flex flex-wrap gap-2">
+                                        @foreach($allAmenities as $amenity)
+                                            <flux:badge size="sm" color="zinc" variant="outline">{{ $amenity }}</flux:badge>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
+
+                            @if($singleUnit?->notes)
+                                <div class="p-6 rounded-2xl bg-zinc-50 border border-zinc-100/50 shadow-inner">
+                                    <div class="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-3">Notes & Observations</div>
+                                    <div class="text-sm text-zinc-700 whitespace-pre-line leading-relaxed italic">
+                                        "{{ $singleUnit->notes }}"
+                                    </div>
+                                </div>
+                            @endif
+
+                            <div class="pt-4 flex justify-end">
+                                <flux:button size="sm" variant="ghost" icon="pencil-square"
+                                    wire:click="$dispatch('edit-unit', { id: '{{ $singleUnit?->id }}' })">
+                                    Modifier les caractéristiques
+                                </flux:button>
+                            </div>
+                        </x-flux::card.body>
+                    </x-flux::card>
+                @endif
+
+                @if($tab === 'leases')
+                    @if($isStandalone)
+                        <x-flux::card class="overflow-hidden border border-zinc-100 shadow-sm rounded-t-none border-t-0 p-0">
+                            <x-flux::card.header icon="document-text" title="Contrat de bail actif" subtitle="Information sur l'occupation actuelle" class="bg-zinc-50/50" />
+                            @if($singleUnit?->activeLease)
+                            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <!-- Client Info -->
+                                <div class="space-y-6">
+                                    <h3 class="text-sm font-bold uppercase tracking-widest text-zinc-400">Client</h3>
+                                    <div class="flex items-center gap-4 p-4 rounded-2xl bg-zinc-50 border border-zinc-100">
+                                        <flux:avatar size="lg" :name="$singleUnit->activeLease->client->full_name" />
+                                        <div>
+                                            <p class="font-bold text-zinc-900">{{ $singleUnit->activeLease->client->full_name }}</p>
+                                            <p class="text-xs text-zinc-500">{{ $singleUnit->activeLease->client->email }}</p>
+                                            <p class="text-xs text-zinc-500">{{ $singleUnit->activeLease->client->phone }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <flux:button size="sm" variant="ghost" icon="pencil"
+                                            wire:click="$dispatch('open-modal', { name: 'edit-lease', lease_id: '{{ $singleUnit->activeLease->id }}' })">
+                                            Modifier le bail
+                                        </flux:button>
+                                    </div>
+                                </div>
+
+                                <!-- Lease Details -->
+                                <div class="space-y-6">
+                                    <h3 class="text-sm font-bold uppercase tracking-widest text-zinc-400">Conditions financières</h3>
+                                    <div class="space-y-3">
+                                        <div class="flex justify-between items-center text-sm">
+                                            <span class="text-zinc-500">Loyer mensuel</span>
+                                            <span class="font-bold text-zinc-900">{{ Number::currency($singleUnit->activeLease->rent_amount, 'XOF') }}</span>
+                                        </div>
+                                        <div class="flex justify-between items-center text-sm">
+                                            <span class="text-zinc-500">Charges</span>
+                                            <span class="font-bold text-zinc-900">{{ Number::currency($singleUnit->activeLease->charges_amount, 'XOF') }}</span>
+                                        </div>
+                                        <flux:separator variant="subtle" />
+                                        <div class="flex justify-between items-center text-base">
+                                            <span class="text-zinc-900 font-medium">Total</span>
+                                            <span class="font-black text-indigo-600">{{ Number::currency($singleUnit->activeLease->rent_amount + $singleUnit->activeLease->charges_amount, 'XOF') }}</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="pt-4 space-y-2">
+                                        <p class="text-xs text-zinc-500">Début : {{ $singleUnit->activeLease->start_date->format('d/m/Y') }}</p>
+                                        <p class="text-xs text-zinc-500">Fin : {{ $singleUnit->activeLease->end_date ? $singleUnit->activeLease->end_date->format('d/m/Y') : 'Indéterminée' }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            @else
+                            <x-flux::card.body>
+                            <div class="flex flex-col items-center justify-center p-12 bg-zinc-50 border border-dashed border-zinc-200 rounded">
+                                <div class="size-16 rounded-full bg-zinc-100 flex items-center justify-center mb-4">
+                                    <flux:icon.document-text class="size-8 text-zinc-400" />
+                                </div>
+                                <h3 class="text-xl font-bold text-zinc-900 mb-2">Aucun bail actif</h3>
+                                <p class="text-zinc-500 text-center max-w-sm mb-6">Cette propriété est actuellement vacante. Ajoutez un client pour commencer à percevoir des loyers.</p>
+                                <flux:button variant="primary" icon="plus"
+                                    wire:click="$dispatch('open-modal', { name: 'create-lease', unit_id: '{{ $singleUnit?->id }}' })">
+                                    Ajouter un client
+                                </flux:button>
+                            </div>
+                            </x-flux::card.body>
+                            @endif
+                        </x-flux::card>
+                    @else
+                        <x-flux::card class="p-0 overflow-hidden border border-zinc-100 shadow-sm rounded-t-none border-t-0">
+                            <x-flux::card.header icon="document-text" title="Baux Actifs"
+                                subtitle="Gestion des contrats de location" class="bg-zinc-50/50">
+                                <x-slot:cardActions>
+                                    <flux:button variant="ghost" size="xs" x-on:click="Flux.modal('create-lease').show()">
+                                        Ajouter Bail
+                                    </flux:button>
+                                </x-slot:cardActions>
+                            </x-flux::card.header>
+
+                            <x-flux::table :paginate="$leases" linesPerPage>
+                                <x-flux::table.columns>
+                                    <x-flux::table.column>Client</x-flux::table.column>
+                                    <x-flux::table.column>Unité</x-flux::table.column>
+                                    <x-flux::table.column>Loyer+Charges</x-flux::table.column>
+                                    <x-flux::table.column>Dépôt</x-flux::table.column>
+                                    <x-flux::table.column>Avance</x-flux::table.column>
+                                    <x-flux::table.column>Période</x-flux::table.column>
+                                    <x-flux::table.column>Statut</x-flux::table.column>
+                                    <x-flux::table.column align="right"></x-flux::table.column>
+                                </x-flux::table.columns>
+                                <x-flux::table.rows>
+                                     @forelse($leases as $lease)
+                                        <x-flux::table.row wire:key="{{ $lease->id }}">
+                                            <x-flux::table.cell>
+                                                <div class="flex items-center gap-3">
+                                                    <flux:avatar size="xs" :name="$lease->client->full_name"
+                                                        class="ring-2 ring-white shadow-sm" />
+                                                    <div class="flex flex-col">
+                                                        <span
+                                                            class="font-medium text-zinc-900 leading-none">{{ $lease->client->full_name }}</span>
+                                                        @if($lease->client->email)
+                                                            <span class="text-2xs text-zinc-500 mt-1">{{ $lease->client->email }}</span>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            </x-flux::table.cell>
+                                            <x-flux::table.cell>
+                                                <a href="{{ route('tenant.units.show', $lease->unit) }}" wire:navigate
+                                                    class="font-medium text-indigo-600 hover:text-indigo-700">
+                                                    {{ $lease->unit->name }}
+                                                </a>
+                                            </x-flux::table.cell>
+                                            <x-flux::table.cell class="font-semibold text-zinc-900">
+                                                {{ Number::currency(($lease->rent_amount + $lease->charges_amount), 'XOF') }}
+                                            </x-flux::table.cell>
+                                            <x-flux::table.cell class="text-zinc-600 italic">
+                                                {{ Number::currency($lease->deposit_amount, 'XOF') }}
+                                            </x-flux::table.cell>
+                                            <x-flux::table.cell class="text-zinc-600 italic">
+                                                {{ Number::currency($lease->advance_amount ?: 0, 'XOF') }}
+                                            </x-flux::table.cell>
+                                            <x-flux::table.cell class="text-zinc-500 whitespace-nowrap">
+                                                {{ $lease->start_date->isoFormat('D MMM YY') }}
+                                                <span class="mx-1 text-zinc-300">→</span>
+                                                @if($lease->end_date)
+                                                    {{ $lease->end_date->isoFormat('D MMM YY') }}
+                                                @else
+                                                    <span class="text-2xs uppercase tracking-tighter opacity-70">Indéterminé</span>
+                                                @endif
+                                            </x-flux::table.cell>
+                                            <x-flux::table.cell>
+                                                <flux:badge :color="$lease->status->color()" size="sm" inset="top bottom">
+                                                    {{ $lease->status->label() }}
+                                                </flux:badge>
+                                            </x-flux::table.cell>
+                                            <x-flux::table.cell align="right">
+                                                <flux:dropdown>
+                                                    <flux:button variant="ghost" size="xs" icon="ellipsis-horizontal" />
+                                                    <flux:menu>
+                                                        <flux:menu.item icon="eye" :href="route('tenant.units.show', $lease->unit)">
+                                                            Détails Unité
+                                                        </flux:menu.item>
+                                                        <flux:menu.item icon="pencil-square"
+                                                            wire:click="$dispatch('open-modal', { name: 'edit-lease', lease_id: '{{ $lease->id }}' })">
+                                                            Modifier le bail
+                                                        </flux:menu.item>
+                                                    </flux:menu>
+                                                </flux:dropdown>
+                                            </x-flux::table.cell>
+                                        </x-flux::table.row>
+                                    @empty
+                                        <x-flux::table.row>
+                                            <x-flux::table.cell colspan="7" class="text-center text-zinc-500 py-10">
+                                                <flux:icon.document-text class="size-10 text-zinc-300 mx-auto mb-3" />
+                                                <p class="text-lg font-semibold">Aucun bail actif</p>
+                                                <p class="text-sm">Commencez par ajouter votre premier bail.</p>
+                                                <flux:button class="mt-4" x-on:click="Flux.modal('create-lease').show()">
+                                                    Ajouter Bail
+                                                </flux:button>
+                                            </x-flux::table.cell>
+                                        </x-flux::table.row>
+                                    @endforelse
+                                </x-flux::table.rows>
+                            </x-flux::table>
+
+                            @if($leases->hasPages())
+                                <div class="p-4 border-t border-zinc-100">
+                                    {{ $leases->links() }}
+                                </div>
+                            @endif
+                        </x-flux::card>
+                    @endif
+                @endif
+
+                @if($tab === 'maintenance' && $isStandalone)
+                    @php $unitMaintenance = $singleUnit?->maintenanceRequests()->latest()->paginate(10); @endphp
+                    <x-flux::card class="p-0 overflow-hidden border border-zinc-100 shadow-sm rounded-t-none border-t-0 mt-0">
+                        <x-flux::card.header icon="wrench-screwdriver" title="Tickets de maintenance" subtitle="Suivi des interventions sur l'unité" class="bg-zinc-50/50" />
+                        <x-flux::table :paginate="$unitMaintenance">
                             <x-flux::table.columns>
-                                <x-flux::table.column>Locataire</x-flux::table.column>
-                                <x-flux::table.column>Unité</x-flux::table.column>
-                                <x-flux::table.column>Loyer+Charges</x-flux::table.column>
-                                <x-flux::table.column>Dépôt</x-flux::table.column>
-                                <x-flux::table.column>Avance</x-flux::table.column>
-                                <x-flux::table.column>Période</x-flux::table.column>
+                                <x-flux::table.column>Titre</x-flux::table.column>
                                 <x-flux::table.column>Statut</x-flux::table.column>
-                                <x-flux::table.column align="right"></x-flux::table.column>
+                                <x-flux::table.column>Date</x-flux::table.column>
                             </x-flux::table.columns>
                             <x-flux::table.rows>
-                                @forelse($leases as $lease)
-                                    <x-flux::table.row wire:key="{{ $lease->id }}">
+                                @forelse($unitMaintenance as $request)
+                                    <x-flux::table.row>
+                                        <x-flux::table.cell class="font-medium">{{ $request->title }}</x-flux::table.cell>
                                         <x-flux::table.cell>
-                                            <div class="flex items-center gap-3">
-                                                <flux:avatar size="xs" :name="$lease->renter->full_name"
-                                                    class="ring-2 ring-white shadow-sm" />
-                                                <div class="flex flex-col">
-                                                    <span
-                                                        class="font-medium text-zinc-900 leading-none">{{ $lease->renter->full_name }}</span>
-                                                    @if($lease->renter->email)
-                                                        <span class="text-2xs text-zinc-500 mt-1">{{ $lease->renter->email }}</span>
-                                                    @endif
-                                                </div>
-                                            </div>
-                                        </x-flux::table.cell>
-                                        <x-flux::table.cell>
-                                            <a href="{{ route('tenant.units.show', $lease->unit) }}" wire:navigate
-                                                class="font-medium text-indigo-600 hover:text-indigo-700">
-                                                {{ $lease->unit->name }}
-                                            </a>
-                                        </x-flux::table.cell>
-                                        <x-flux::table.cell class="font-semibold text-zinc-900">
-                                            {{ Number::currency(($lease->rent_amount + $lease->charges_amount), 'XOF') }}
-                                        </x-flux::table.cell>
-                                        <x-flux::table.cell class="text-zinc-600 italic">
-                                            {{ Number::currency($lease->deposit_amount, 'XOF') }}
-                                        </x-flux::table.cell>
-                                        <x-flux::table.cell class="text-zinc-600 italic">
-                                            {{ Number::currency($lease->advance_amount ?: 0, 'XOF') }}
-                                        </x-flux::table.cell>
-                                        <x-flux::table.cell class="text-zinc-500 whitespace-nowrap">
-                                            {{ $lease->start_date->isoFormat('D MMM YY') }}
-                                            <span class="mx-1 text-zinc-300">→</span>
-                                            @if($lease->end_date)
-                                                {{ $lease->end_date->isoFormat('D MMM YY') }}
-                                            @else
-                                                <span class="text-2xs uppercase tracking-tighter opacity-70">Indéterminé</span>
-                                            @endif
-                                        </x-flux::table.cell>
-                                        <x-flux::table.cell>
-                                            <flux:badge :color="$lease->status->color()" size="sm" inset="top bottom">
-                                                {{ $lease->status->label() }}
+                                            <flux:badge size="sm" :color="$request->status->color()" inset="top bottom">
+                                                {{ $request->status->label() }}
                                             </flux:badge>
                                         </x-flux::table.cell>
-                                        <x-flux::table.cell align="right">
-                                            <flux:dropdown>
-                                                <flux:button variant="ghost" size="xs" icon="ellipsis-horizontal" />
-                                                <flux:menu>
-                                                    <flux:menu.item icon="eye" :href="route('tenant.units.show', $lease->unit)">
-                                                        Détails Unité
-                                                    </flux:menu.item>
-                                                    <flux:menu.item icon="pencil-square"
-                                                        wire:click="$dispatch('open-modal', { name: 'edit-lease', lease_id: '{{ $lease->id }}' })">
-                                                        Modifier le bail
-                                                    </flux:menu.item>
-                                                </flux:menu>
-                                            </flux:dropdown>
-                                        </x-flux::table.cell>
+                                        <x-flux::table.cell class="text-zinc-500">{{ $request->created_at->diffForHumans() }}</x-flux::table.cell>
                                     </x-flux::table.row>
                                 @empty
                                     <x-flux::table.row>
-                                        <x-flux::table.cell colspan="7" class="text-center text-zinc-500 py-10">
-                                            <flux:icon.document-text class="size-10 text-zinc-300 mx-auto mb-3" />
-                                            <p class="text-lg font-semibold">Aucun bail actif</p>
-                                            <p class="text-sm">Commencez par ajouter votre premier bail.</p>
-                                            <flux:button class="mt-4" x-on:click="Flux.modal('create-lease').show()">
-                                                Ajouter Bail
-                                            </flux:button>
-                                        </x-flux::table.cell>
+                                        <x-flux::table.cell colspan="3" class="text-center py-10 text-zinc-500">Aucun ticket.</x-flux::table.cell>
                                     </x-flux::table.row>
                                 @endforelse
                             </x-flux::table.rows>
                         </x-flux::table>
-
-                        @if($leases->hasPages())
-                            <div class="p-4 border-t border-zinc-100">
-                                {{ $leases->links() }}
-                            </div>
-                        @endif
                     </x-flux::card>
                 @endif
             </div>
@@ -570,11 +831,13 @@ new #[Layout('layouts.app', ['title' => 'Property Details'])] class extends Comp
 
         <livewire:pages::tenant.properties.modals.create-unit :property="$property" />
         <livewire:pages::tenant.properties.modals.create />
-
         <livewire:pages::tenant.units.modals.edit />
-
         <livewire:pages::tenant.leases.modals.create />
         <livewire:pages::tenant.leases.modals.edit />
-        <livewire:pages::tenant.renters.modals.create />
+        <livewire:pages::tenant.maintenance.properties.create-modal />
+        <livewire:pages::tenant.maintenance.properties.edit-modal />
+        <livewire:pages::tenant.maintenance.units.create-modal />
+        <livewire:pages::tenant.clients.modals.create />
+        <livewire:pages::tenant.sales.modals.record-sale />
     </x-layouts::content>
 </div>

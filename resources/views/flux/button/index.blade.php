@@ -113,7 +113,7 @@ $classes = Flux::classes()
          default => '',
     })
     ->add(match ($variant) { // Shadows...
-        'primary' => 'shadow-[inset_0px_1px_--theme(--color-white/.2)]',
+        'primary' => 'shadow-md',
         'danger' => 'shadow-[inset_0px_1px_var(--color-red-500),inset_0px_2px_--theme(--color-white/.15)]',        'outline' => match ($size) {
             'base' => 'shadow-xs',
             'sm' => 'shadow-xs',
