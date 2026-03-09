@@ -133,6 +133,7 @@ new
                     @endforelse
                 </x-flux::table.rows>
             </x-flux::table>
+            
         </x-flux::card>
 
     </x-layouts::content>

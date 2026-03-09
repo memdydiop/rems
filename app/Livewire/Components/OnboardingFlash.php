@@ -10,12 +10,34 @@ class OnboardingFlash extends Component
     public string $title;
     public string $description;
     public string $align = 'bottom'; // 'bottom', 'top', 'left', 'right'
+    public ?string $requiredStep = null;
+    public int $currentStepNumber = 1;
+    public int $totalSteps = 1;
 
     public bool $hasSeen = false;
 
     public function mount()
     {
-        $this->hasSeen = auth()->check() ? auth()->user()->hasSeenOnboarding($this->step) : true;
+        if (!auth()->check()) {
+            $this->hasSeen = true;
+            return;
+        }
+
+        $user = auth()->user();
+
+        // If already seen, don't show
+        if ($user->hasSeenOnboarding($this->step)) {
+            $this->hasSeen = true;
+            return;
+        }
+
+        // If a required step is NOT seen yet, don't show this one yet
+        if ($this->requiredStep && !$user->hasSeenOnboarding($this->requiredStep)) {
+            $this->hasSeen = true; // Technically not seen, but we hide it for now
+            return;
+        }
+
+        $this->hasSeen = false;
     }
 
     public function dismiss()

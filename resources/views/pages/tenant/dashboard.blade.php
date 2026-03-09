@@ -273,8 +273,19 @@ new
 ?>
 
 <div>
-    <x-layouts::content :heading="'Bonjour, ' . auth()->user()->name . '!'"
-        subheading="Voici ce qui se passe dans votre espace de travail aujourd'hui.">
+    <x-layouts::content subheading="Voici ce qui se passe dans votre espace de travail aujourd'hui.">
+        <x-slot:heading>
+            <livewire:components.onboarding-flash 
+                step="dashboard_welcome" 
+                title="👋 Bienvenue sur votre Tableau de Bord"
+                description="C'est ici que vous aurez une vue d'ensemble sur vos revenus, dépenses et unités occupées."
+                align="bottom"
+                :currentStepNumber="1"
+                :totalSteps="5"
+            >
+                Bonjour, {{ auth()->user()->name }} !
+            </livewire:components.onboarding-flash>
+        </x-slot:heading>
 
         <x-slot:actions>
             @php
@@ -282,19 +293,61 @@ new
             @endphp
 
             <div class="flex items-center gap-3">
-                <livewire:components.onboarding-flash step="dashboard_add_property" title="🚀 Ajoutez votre Propriété"
-                    description="C'est ici que tout commence ! Ajoutez votre première propriété pour y associer des unités et des locataires."
-                    align="bottom">
+                <livewire:components.onboarding-flash 
+                    step="dashboard_add_property" 
+                    requiredStep="dashboard_welcome"
+                    title="🏢 Gérez vos Biens"
+                    description="Ajoutez vos immeubles, maisons ou appartements ici pour commencer à les gérer."
+                    align="bottom"
+                    :currentStepNumber="2"
+                    :totalSteps="5"
+                >
                     <flux:button href="{{ route('tenant.properties.index') }}" icon="home" variant="filled" size="sm">
                         Propriété
                     </flux:button>
                 </livewire:components.onboarding-flash>
-                <flux:button href="{{ route('tenant.leases.index') }}" icon="document-plus" variant="filled" size="sm">
-                    Bail</flux:button>
-                <flux:button href="{{ route('tenant.maintenance.units.index') }}" icon="wrench" variant="filled" size="sm">
-                    Ticket</flux:button>
-                <flux:button href="{{ route('tenant.expenses.index') }}" icon="credit-card" variant="filled" size="sm">
-                    Dépense</flux:button>
+
+                <livewire:components.onboarding-flash 
+                    step="dashboard_add_lease" 
+                    requiredStep="dashboard_add_property"
+                    title="📄 Créez vos Baux"
+                    description="Une fois vos unités créées, associez-leur des locataires via un contrat de bail."
+                    align="bottom"
+                    :currentStepNumber="3"
+                    :totalSteps="5"
+                >
+                    <flux:button href="{{ route('tenant.leases.index') }}" icon="document-plus" variant="filled" size="sm">
+                        Bail
+                    </flux:button>
+                </livewire:components.onboarding-flash>
+
+                <livewire:components.onboarding-flash 
+                    step="dashboard_add_ticket" 
+                    requiredStep="dashboard_add_lease"
+                    title="🔧 Suivez la Maintenance"
+                    description="Centralisez toutes les demandes de réparation et de travaux pour vos biens."
+                    align="bottom"
+                    :currentStepNumber="4"
+                    :totalSteps="5"
+                >
+                    <flux:button href="{{ route('tenant.maintenance.units.index') }}" icon="wrench" variant="filled" size="sm">
+                        Ticket
+                    </flux:button>
+                </livewire:components.onboarding-flash>
+
+                <livewire:components.onboarding-flash 
+                    step="dashboard_add_expense" 
+                    requiredStep="dashboard_add_ticket"
+                    title="💰 Suivez vos Dépenses"
+                    description="Enregistrez vos factures et charges pour calculer automatiquement votre rentabilité."
+                    align="bottom"
+                    :currentStepNumber="5"
+                    :totalSteps="5"
+                >
+                    <flux:button href="{{ route('tenant.expenses.index') }}" icon="credit-card" variant="filled" size="sm">
+                        Dépense
+                    </flux:button>
+                </livewire:components.onboarding-flash>
             </div>
         </x-slot:actions>
 
@@ -428,7 +481,7 @@ new
                     <div class="space-y-4 flex-1 overflow-y-auto">
                         @forelse($this->alerts as $alert)
                             <div class="flex items-start gap-4 p-3 rounded-xl bg-white border border-zinc-100 shadow-sm transition-all hover:shadow-md">
-                                <div class="flex-shrink-0 mt-1">
+                                <div class="shrink-0 mt-1">
                                     <div class="w-10 h-10 rounded-full flex items-center justify-center text-white shadow-sm {{ $alert['color'] }}">
                                         <flux:icon name="{{ $alert['icon'] }}" class="w-5 h-5" />
                                     </div>
@@ -441,7 +494,7 @@ new
                                         {{ $alert['description'] }}
                                     </p>
                                 </div>
-                                <div class="flex-shrink-0 self-center">
+                                <div class="shrink-0 self-center">
                                     <flux:button size="sm" variant="filled" href="{{ $alert['action_url'] }}">
                                         {{ $alert['action_label'] }}
                                     </flux:button>
@@ -513,7 +566,7 @@ new
                                 <span
                                     class="block text-xs font-bold text-rose-600">{{ number_format($lease->rent_amount, 0, ',', ' ') }}
                                     FCFA</span>
-                                <span class="text-[10px] text-rose-500 bg-rose-50 px-1.5 py-0.5 rounded">
+                                <span class="text-2xs text-rose-500 bg-rose-50 px-1.5 py-0.5 rounded">
                                     +{{ $lease->days_overdue }} jours
                                 </span>
                             </div>
@@ -742,7 +795,6 @@ new
             </x-flux::table>
         </x-flux::card>
 
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     </x-layouts::content>
 </div>
-
-<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>

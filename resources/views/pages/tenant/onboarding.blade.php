@@ -193,16 +193,17 @@ new #[Layout('layouts.guest', ['title' => 'Configuration Initiale'])] class exte
         <div class="bg-white backdrop-blur-xl border border-zinc-200 rounded-2xl shadow-xl overflow-hidden">
             <div class="p-8">
                 <!-- Transitions Wrapper -->
-                <div x-data="{ step: @entangle('currentStep') }" class="relative min-h-75">
+                <div x-data="{ step: @entangle('currentStep') }" class="grid grid-cols-1">
 
                     <!-- Step 0: Welcome -->
-                    <div x-show="step === 0" x-transition:enter="transition ease-out duration-300"
+                    <div x-show="step === 0" 
+                        x-transition:enter="transition ease-out duration-300"
                         x-transition:enter-start="opacity-0 translate-x-4"
                         x-transition:enter-end="opacity-100 translate-x-0"
                         x-transition:leave="transition ease-in duration-200"
                         x-transition:leave-start="opacity-100 translate-x-0"
                         x-transition:leave-end="opacity-0 -translate-x-4"
-                        class="absolute inset-0 flex flex-col items-center justify-center text-center h-full">
+                        class="col-start-1 row-start-1 flex flex-col items-center justify-center text-center">
                         <div class="mb-6">
                             <x-app-logo-icon class="h-16 w-auto" />
                         </div>
@@ -234,12 +235,14 @@ new #[Layout('layouts.guest', ['title' => 'Configuration Initiale'])] class exte
                     </div>
 
                     <!-- Step 1: Property -->
-                    <div x-show="step === 1" x-transition:enter="transition ease-out duration-300"
+                    <div x-show="step === 1" 
+                        x-transition:enter="transition ease-out duration-300"
                         x-transition:enter-start="opacity-0 translate-x-4"
                         x-transition:enter-end="opacity-100 translate-x-0"
                         x-transition:leave="transition ease-in duration-200"
                         x-transition:leave-start="opacity-100 translate-x-0"
-                        x-transition:leave-end="opacity-0 -translate-x-4" class="absolute inset-0">
+                        x-transition:leave-end="opacity-0 -translate-x-4" 
+                        class="col-start-1 row-start-1">
                         <div class="text-center mb-8">
                             <div
                                 class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-blue-50 text-blue-600 mb-4 ring-1 ring-blue-100">
@@ -262,12 +265,14 @@ new #[Layout('layouts.guest', ['title' => 'Configuration Initiale'])] class exte
                     </div>
 
                     <!-- Step 2: Unit -->
-                    <div x-show="step === 2" x-cloak x-transition:enter="transition ease-out duration-300"
+                    <div x-show="step === 2" x-cloak 
+                        x-transition:enter="transition ease-out duration-300"
                         x-transition:enter-start="opacity-0 translate-x-4"
                         x-transition:enter-end="opacity-100 translate-x-0"
                         x-transition:leave="transition ease-in duration-200"
                         x-transition:leave-start="opacity-100 translate-x-0"
-                        x-transition:leave-end="opacity-0 -translate-x-4" class="absolute inset-0">
+                        x-transition:leave-end="opacity-0 -translate-x-4" 
+                        class="col-start-1 row-start-1">
                         <div class="text-center mb-8">
                             <div
                                 class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 mb-4 ring-1 ring-emerald-100">
@@ -284,12 +289,14 @@ new #[Layout('layouts.guest', ['title' => 'Configuration Initiale'])] class exte
                     </div>
 
                     <!-- Step 3: Renter -->
-                    <div x-show="step === 3" x-cloak x-transition:enter="transition ease-out duration-300"
+                    <div x-show="step === 3" x-cloak 
+                        x-transition:enter="transition ease-out duration-300"
                         x-transition:enter-start="opacity-0 translate-x-4"
                         x-transition:enter-end="opacity-100 translate-x-0"
                         x-transition:leave="transition ease-in duration-200"
                         x-transition:leave-start="opacity-100 translate-x-0"
-                        x-transition:leave-end="opacity-0 -translate-x-4" class="absolute inset-0">
+                        x-transition:leave-end="opacity-0 -translate-x-4" 
+                        class="col-start-1 row-start-1">
                         <div class="text-center mb-8">
                             <div
                                 class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-violet-50 text-violet-600 mb-4 ring-1 ring-violet-100">
@@ -311,9 +318,11 @@ new #[Layout('layouts.guest', ['title' => 'Configuration Initiale'])] class exte
                     </div>
 
                     <!-- Step 4: Completion -->
-                    <div x-show="step === 4" x-cloak x-transition:enter="transition ease-out duration-300"
-                        x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
-                        class="absolute inset-0 flex flex-col items-center justify-center text-center h-full">
+                    <div x-show="step === 4" x-cloak 
+                        x-transition:enter="transition ease-out duration-300"
+                        x-transition:enter-start="opacity-0 scale-95" 
+                        x-transition:enter-end="opacity-100 scale-100"
+                        class="col-start-1 row-start-1 flex flex-col items-center justify-center text-center">
                         <div
                             class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-50 text-green-600 mb-6 ring-4 ring-green-50">
                             <flux:icon name="check" class="w-8 h-8" />
